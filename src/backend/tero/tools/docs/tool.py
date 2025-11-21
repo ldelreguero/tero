@@ -30,7 +30,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ...agents.domain import AgentToolConfig, AgentToolConfigFile
 from ...agents.repos import AgentToolConfigFileRepository
-from ...ai_models import ai_factory, azure_provider
+from ...ai_models import ai_factory
 from ...ai_models.domain import LlmModel
 from ...ai_models.repos import AiModelRepository
 from ...core.assets import solve_asset_path
@@ -46,6 +46,7 @@ from ...threads.domain import AgentActionEvent, AgentAction
 from ..core import AgentToolWithFiles, load_schema
 from .domain import DocToolFile, DocToolConfig
 from .repos import DocToolFileRepository, DocToolConfigRepository
+
 
 logger = logging.getLogger(__name__)
 DOCS_TOOL_ID = "docs"

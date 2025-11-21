@@ -275,7 +275,7 @@ async def _remove_tool(tc: AgentToolConfig, user_id: int, db: AsyncSession):
 async def _update_tool(tc: AgentToolConfig, new_config: Dict[str, Any], tool: AgentTool, zip_file: ZipFile, root_folder: str, user: User, db: AsyncSession, background_tasks: BackgroundTasks):
     await _configure_parsed_tool(tc.tool_id, new_config, tc.agent, tc, tool, user, db)
     existing_files = {f.name: f for f in await AgentToolConfigFileRepository(db).find_by_agent_id_and_tool_id(tc.agent_id, tc.tool_id)}
-    new_files = await _parse_new_files(tc.tool_id, zip_file, root_folder, user)
+    new_files = _parse_new_files(tc.tool_id, zip_file, root_folder, user)
 
     for file_name, file in existing_files.items():
         if not file_name in new_files:
@@ -334,7 +334,7 @@ def _parse_config_value(value: Any, schema: dict, key: str, tool_id: str) -> Any
         raise ValueError(f"Invalid type '{schema_type}' while parsing tool '{tool_id}' config '{key}'")
 
 
-async def _parse_new_files(tool_id: str, zip_file: ZipFile, root_folder: str, user: User) -> Dict[str, File]:
+def _parse_new_files(tool_id: str, zip_file: ZipFile, root_folder: str, user: User) -> Dict[str, File]:
     return {path.rsplit("/", 1)[1]: _parse_new_file(path, zip_file, user) for path in zip_file.namelist() if path.startswith(f"{root_folder}{tool_id}/") and path != f"{root_folder}{tool_id}/"}
 
 
@@ -362,7 +362,7 @@ async def _update_tool_file(file: File, new_file: File, tc: AgentToolConfig, too
 
 async def _configure_new_tool(tool_id: str, new_config: Dict[str, Any], agent: Agent,tool: AgentTool, zip_file: ZipFile, root_folder: str, user: User, db: AsyncSession, background_tasks: BackgroundTasks):
     await _configure_parsed_tool(tool_id, new_config, agent, None, tool, user, db)
-    files = await _parse_new_files(tool_id, zip_file, root_folder, user)
+    files = _parse_new_files(tool_id, zip_file, root_folder, user)
     for file in files.values():
         await upload_tool_file(file, tool, agent.id, user, db, background_tasks)
 

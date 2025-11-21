@@ -8,9 +8,8 @@ import { useAgentStore } from '@/composables/useAgentStore';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 import SidebarSkeleton from './SidebarSkeleton.vue';
 import SidebarSearch from './SidebarSearch.vue';
-import type { Thread, Agent } from '@/services/api';
+import { type Thread, type Agent, ApiService } from '@/services/api';
 import { useSidebar } from '@/composables/useSidebar';
-import { ApiService } from '@/services/api';
 
 const { t } = useI18n();
 const router = useRouter();
