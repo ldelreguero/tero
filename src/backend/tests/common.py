@@ -1,23 +1,23 @@
 import asyncio
+from datetime import datetime
 import json
 import logging
 import os
-from datetime import datetime
 from typing import AsyncGenerator, List, Sequence, AsyncContextManager, Optional, Generator
 
 import aiofiles
-import freezegun
-import pytest
-import pytest_asyncio
-import sqlparse
 from fastapi import status, Depends # noqa: F401  # used by test files importing common
+import freezegun
 from freezegun import freeze_time # noqa: F401  # used by test files importing common
 from httpx import Response, AsyncClient, ASGITransport
 from pydantic import BaseModel
+import pytest
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncConnection
 from sqlalchemy.orm import Mapped
 from sqlmodel import SQLModel, select, func, col
 from sqlmodel.ext.asyncio.session import AsyncSession
+import sqlparse
 from testcontainers.postgres import PostgresContainer
 
 # avoid any authentication requirements
@@ -26,17 +26,17 @@ os.environ['OPENID_URL'] = ''
 from tero.agents.api import AGENT_TOOLS_PATH, AGENT_TOOL_FILES_PATH
 from tero.agents.domain import AgentListItem, Agent
 from tero.api import app
-from tero.core.env import env # noqa: F401  # used by test files importing common
+from tero.core import auth
 from tero.core.api import BASE_PATH # noqa: F401  # used by test files importing common
 from tero.core.assets import solve_asset_path
+from tero.core.env import env # noqa: F401  # used by test files importing common
 from tero.core.repos import get_db
 from tero.files.domain import FileStatus
+from tero.teams.domain import Role, Team, TeamRole, TeamRoleStatus
 from tero.threads.api import THREAD_MESSAGES_PATH, THREADS_PATH, ThreadCreateApi
 from tero.threads.domain import Thread, ThreadMessage
 from tero.tools.docs import DOCS_TOOL_ID
 from tero.users.domain import User, UserListItem
-from tero.teams.domain import Role, Team, TeamRole, TeamRoleStatus
-from tero.core import auth
 
 
 def parse_date(value: str) -> datetime:
@@ -106,7 +106,15 @@ async def client_fixture(session: AsyncSession) -> AsyncGenerator[AsyncClient, N
     async def get_db_override() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
+    async def get_current_user_override(db: AsyncSession = Depends(get_db)):
+        from tero.users.repos import UserRepository
+        user = await UserRepository(db).find_by_id(USER_ID)
+        if user is None:
+            raise ValueError(f"User with ID {USER_ID} not found")
+        return user
+
     app.dependency_overrides[get_db] = get_db_override
+    app.dependency_overrides[auth.get_current_user] = get_current_user_override
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
     app.dependency_overrides.clear()

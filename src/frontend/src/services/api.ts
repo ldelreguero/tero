@@ -2,6 +2,8 @@ import auth from './auth'
 import moment from 'moment'
 import type { JSONSchema7 } from 'json-schema'
 import { UploadedFile, FileStatus, AgentPrompt } from '../../../common/src/utils/domain'
+import type { StatusUpdate } from '../../../common/src/components/chat/ChatMessage.vue'
+
 
 export class HttpError extends Error {
   public status: number
@@ -88,6 +90,20 @@ export enum ReasoningEffort {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH'
+}
+
+export class Evaluator {
+  modelId: string
+  temperature: LlmTemperature
+  reasoningEffort: ReasoningEffort
+  prompt: string
+
+  constructor(modelId: string, temperature: LlmTemperature, reasoningEffort: ReasoningEffort, prompt: string) {
+    this.modelId = modelId
+    this.temperature = temperature
+    this.reasoningEffort = reasoningEffort
+    this.prompt = prompt
+  }
 }
 
 export enum FileProcessor {
@@ -308,8 +324,9 @@ export class ThreadMessage {
   hasPositiveFeedback?: boolean
   files?: UploadedFile[]
   stopped?: boolean
+  statusUpdates: StatusUpdate[] = []
 
-  constructor(id: number, text: string, timestamp: Date, origin: ThreadMessageOrigin, children: ThreadMessage[], minutesSaved?: number, feedbackText?: string, hasPositiveFeedback?: boolean, stopped?: boolean) {
+  constructor(id: number, text: string, timestamp: Date, origin: ThreadMessageOrigin, children: ThreadMessage[], minutesSaved?: number, feedbackText?: string, hasPositiveFeedback?: boolean, stopped?: boolean, statusUpdates?: StatusUpdate[]) {
     this.id = id
     this.text = text
     this.timestamp = timestamp
@@ -319,6 +336,7 @@ export class ThreadMessage {
     this.feedbackText = feedbackText
     this.hasPositiveFeedback = hasPositiveFeedback
     this.stopped = stopped
+    this.statusUpdates = statusUpdates || []
   }
 }
 
@@ -559,13 +577,17 @@ export class TestCaseResult {
   testSuiteRunId?: number
   executedAt: Date
   status: TestCaseResultStatus
+  testCaseName: string
+  evaluatorAnalysis?: string
 
-  constructor(testCaseId: number, executedAt: Date, status: TestCaseResultStatus, id?: number, testSuiteRunId?: number) {
+  constructor(testCaseId: number, executedAt: Date, status: TestCaseResultStatus, testCaseName: string, id?: number, testSuiteRunId?: number, evaluatorAnalysis?: string) {
     this.testCaseId = testCaseId
     this.executedAt = executedAt
     this.status = status
+    this.testCaseName = testCaseName
     this.testSuiteRunId = testSuiteRunId
     this.id = id
+    this.evaluatorAnalysis = evaluatorAnalysis
   }
 }
 
@@ -589,7 +611,7 @@ export type TestSuiteExecutionStreamEvent =
   | { type: 'suite.test.agentMessage.complete'; data: { id: number; text: string } }
   | { type: 'suite.test.executionStatus'; data: any }
   | { type: 'suite.test.error'; data: { message: string } }
-  | { type: 'suite.test.complete'; data: { testCaseId: number; resultId: number; status: string } }
+  | { type: 'suite.test.complete'; data: { testCaseId: number; resultId: number; status: string; evaluation?: any } }
   | { type: 'suite.complete'; data: { suiteRunId: number; status: string; totalTests: number; passed: number; failed: number; errors: number; skipped: number } }
   | { type: 'suite.error'; data: {} }
 
@@ -779,7 +801,7 @@ export class ApiService {
     return await this.fetchJson(`/agents/${agentId}/tools/${toolId}/files`)
   }
 
-  async findAgentDocToolFile(agentId: number, toolId: string, fileId: number): Promise<DocToolFile> {
+  async findAgentToolFile(agentId: number, toolId: string, fileId: number): Promise<DocToolFile> {
     return await this.fetchJson(`/agents/${agentId}/tools/${toolId}/files/${fileId}`)
   }
 
@@ -810,6 +832,14 @@ export class ApiService {
 
   async deleteAgentToolFile(agentId: number, toolId: string, fileId: number) {
     await this.delete(`/agents/${agentId}/tools/${toolId}/files/${fileId}`)
+  }
+
+  async findAgentEvaluator(agentId: number): Promise<Evaluator> {
+    return await this.fetchJson(`/agents/${agentId}/evaluator`)
+  }
+
+  async saveAgentEvaluator(agentId: number, evaluator: Evaluator): Promise<Evaluator> {
+    return await this.put(`/agents/${agentId}/evaluator`, evaluator)
   }
 
   async findAgentPrompts(agentId: number): Promise<AgentPrompt[]> {
@@ -844,12 +874,24 @@ export class ApiService {
     return await this.put(`/agents/${agentId}/tests/${testCaseId}`, { name })
   }
 
+  async cloneTestCase(agentId: number, testCaseId: number): Promise<TestCase> {
+    return await this.post(`/agents/${agentId}/tests/${testCaseId}/clone`)
+  }
+
   async deleteTestCase(agentId: number, testCaseId: number) {
     await this.delete(`/agents/${agentId}/tests/${testCaseId}`)
   }
 
   async findTestCaseMessages(agentId: number, testCaseId: number): Promise<ThreadMessage[]> {
     return await this.fetchJson(`/agents/${agentId}/tests/${testCaseId}/messages`)
+  }
+
+  async findTestCaseEvaluator(agentId: number, testCaseId: number): Promise<Evaluator> {
+    return await this.fetchJson(`/agents/${agentId}/tests/${testCaseId}/evaluator`)
+  }
+
+  async saveTestCaseEvaluator(agentId: number, testCaseId: number, config: Evaluator): Promise<Evaluator> {
+    return await this.put(`/agents/${agentId}/tests/${testCaseId}/evaluator`, config)
   }
 
   async addTestCaseMessage(agentId: number, testCaseId: number, message: TestCaseNewThreadMessage): Promise<ThreadMessage> {
@@ -874,6 +916,10 @@ export class ApiService {
     }
   }
 
+  async stopTestSuiteRun(agentId: number, suiteRunId: number): Promise<void> {
+    await this.post(`/agents/${agentId}/tests/runs/${suiteRunId}/stop`)
+  }
+
   async findTestSuiteRuns(agentId: number, limit: number = 20, offset: number = 0): Promise<TestSuiteRun[]> {
     const searchParams = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() });
     const suiteRuns = await this.fetchJson(`/agents/${agentId}/tests/runs?${searchParams.toString()}`)
@@ -883,13 +929,17 @@ export class ApiService {
   private parseTestSuiteRunDates(suiteRun: any): TestSuiteRun {
     return {
       ...suiteRun,
-      executedAt: new Date(suiteRun.executedAt),
-      completedAt: suiteRun.completedAt ? new Date(suiteRun.completedAt) : undefined
+      executedAt: moment.utc(suiteRun.executedAt).toDate(),
+      completedAt: suiteRun.completedAt ? moment.utc(suiteRun.completedAt).toDate() : undefined
     }
   }
 
   async findTestSuiteRunResults(agentId: number, suiteRunId: number): Promise<TestCaseResult[]> {
     return await this.fetchJson(`/agents/${agentId}/tests/runs/${suiteRunId}/results`)
+  }
+
+  async deleteTestSuiteRun(agentId: number, suiteRunId: number): Promise<void> {
+    await this.delete(`/agents/${agentId}/tests/runs/${suiteRunId}`)
   }
 
   async findTestSuiteRunResultMessages(agentId: number, suiteRunId: number, resultId: number): Promise<ThreadMessage[]> {

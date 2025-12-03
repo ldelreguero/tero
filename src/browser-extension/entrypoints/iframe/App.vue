@@ -326,7 +326,7 @@ const sidebarClasses = computed(() => [
     "flowStepMissingElement": "I could not find the element '{selector}'. This might be due to recent changes in the page which I am not aware of. Please try again and if the issue persists contact [support](mailto:{contactEmail}?subject=Navigation%20element).",
   },
   "es": {
-    "activationError": "No se pudo activar el {agentName}. Puedes intentar de nuevo y si el problema persiste contactar al [soporte de {agentName}](mailto:{contactEmail}?subject=Activation%20issue)",
+    "activationError": "No se pudo activar {agentName}. Puedes intentar de nuevo y si el problema persiste contactar al [soporte de {agentName}](mailto:{contactEmail}?subject=Activation%20issue)",
     "interactionSummaryError": "No pude procesar informacion generada por la página actual. Esto puede impactar en la información y respuestas que te puedo dar. Si el problema persiste por favor contacta a [soporte](mailto:{contactEmail})?subject=Interaction%20issue",
     "agentAnswerError": "Ahora no puedo completar tu pedido. Puedes intentar de nuevo y si el problema persiste contactar a [soporte](mailto:{contactEmail}?subject=Question%20issue)",
     "flowStepMissingElement": "No pude encontrar el elemento '{selector}'. Esto puede ser debido a cambios recientes en la página de los cuales no tengo conocimiento. Por favor intenta de nuevo y si el problema persiste contacta a [soporte](mailto:{contactEmail}?subject=Navigation%20element).", 

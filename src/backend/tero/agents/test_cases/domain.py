@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional, List
 
-from pydantic import BaseModel
-from sqlmodel import SQLModel, Field, Relationship, Index
+from pydantic import BaseModel, field_serializer
+from sqlmodel import SQLModel, Field, Relationship, Index, Column, Text
 
 from ...core.domain import CamelCaseModel
 from ...threads.domain import Thread
@@ -17,8 +17,12 @@ class TestCase(SQLModel, table=True):
     )
     thread_id: int = Field(foreign_key="thread.id", primary_key=True)
     agent_id: int = Field(foreign_key="agent.id")
+    evaluator_id: Optional[int] = Field(default=None, foreign_key="evaluator.id")
     last_update: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     thread: Thread = Relationship()
+
+    def is_default_name(self) -> bool:
+        return not self.thread.name or self.thread.name.strip().lower().startswith("test case #")
 
 
 class TestCaseResultStatus(Enum):
@@ -34,6 +38,7 @@ class TestSuiteRunStatus(Enum):
     RUNNING = "RUNNING"
     SUCCESS = "SUCCESS"
     FAILURE = "FAILURE"
+
 
 class TestCaseEventType(Enum):
     PHASE = "phase"
@@ -78,16 +83,25 @@ class TestCaseResult(CamelCaseModel, table=True):
     )
     id: int = Field(primary_key=True, default=None)
     thread_id: Optional[int] = Field(default=None, foreign_key="thread.id")
-    test_case_id: int = Field(foreign_key="test_case.thread_id")
+    test_case_id: Optional[int] = Field(default=None, foreign_key="test_case.thread_id")
     test_suite_run_id: Optional[int] = Field(default=None, foreign_key="test_suite_run.id")
     status: TestCaseResultStatus = Field(default=TestCaseResultStatus.PENDING)
+    evaluator_analysis: Optional[str] = Field(default=None, sa_column=Column(Text))
     executed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    test_case_name: Optional[str] = Field(default=None)
 
 
 class PublicTestCase(CamelCaseModel):
     agent_id: int
     thread: Thread
     last_update: datetime
+
+    @field_serializer('last_update')
+    def serialize_last_update(self, value: datetime) -> str:
+        if value.tzinfo is not None:
+            value = value.astimezone(timezone.utc)
+        naive_value = value.replace(tzinfo=None)
+        return naive_value.isoformat()
 
 
 class NewTestCaseMessage(BaseModel):

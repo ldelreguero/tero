@@ -10,7 +10,6 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import aiofiles
 from fastapi.background import BackgroundTasks
 from jinja2 import Environment, FileSystemLoader
-from jinja2.nodes import Name
 from PIL import Image
 from pydantic import BaseModel
 from slugify import slugify
@@ -27,12 +26,15 @@ from ..tools.oauth import ToolOAuthRequest
 from ..tools.repos import ToolRepository
 from ..users.domain import User
 from .domain import Agent, AgentUpdate, AgentToolConfig, LlmTemperature, ReasoningEffort
+from .evaluators.domain import Evaluator
+from .evaluators.repos import EvaluatorRepository
 from .prompts.domain import AgentPrompt
 from .prompts.repos import AgentPromptRepository
 from .repos import AgentRepository, AgentToolConfigRepository, AgentToolConfigFileRepository
 from .template_parser import JinjaTemplateParser
 from .test_cases.domain import TestCase
 from .test_cases.repos import TestCaseRepository
+from .test_cases.runner import EVALUATOR_DEFAULT_TEMPERATURE, EVALUATOR_DEFAULT_REASONING_EFFORT
 from .tool_file import upload_tool_file
 
 
@@ -82,11 +84,12 @@ async def _generate_agent_markdown(agent: Agent, tools: List[ToolInfo], user_id:
         system_prompt=agent.system_prompt,
         icon=agent.icon,
         model_name=agent.model.name,
-        model_config=_format_model_config(agent),
+        model_config=_format_model_config(agent.temperature, agent.reasoning_effort, agent.model.model_type),
         conversation_starters=[_format_prompt(p) for p in prompts if p.starter],
         user_prompts=[_format_prompt(p) for p in prompts if not p.starter],
         tools=[_format_tool(tool) for tool in tools],
-        tests=[await _format_test(test, db) for test in await TestCaseRepository(db).find_by_agent(agent.id)]
+        tests=[await _format_test(test, db) for test in await TestCaseRepository(db).find_by_agent(agent.id)],
+        evaluator=await _format_agent_evaluator(agent, db)
     )
 
 
@@ -94,9 +97,9 @@ def _build_jinja_env() -> Environment:
     return Environment(loader=FileSystemLoader(solve_asset_path('.', __file__)), trim_blocks=True, lstrip_blocks=True)
 
 
-def _format_model_config(agent: Agent) -> dict:
-    return {"Temperature": agent.temperature.value.capitalize()} if agent.model.model_type == LlmModelType.CHAT \
-        else {"Reasoning": agent.reasoning_effort.value.capitalize()}
+def _format_model_config(temperature: LlmTemperature, reasoning_effort: ReasoningEffort, model_type: LlmModelType) -> dict:
+    return {"Temperature": temperature.value.capitalize()} if model_type == LlmModelType.CHAT \
+        else {"Reasoning": reasoning_effort.value.capitalize()}
 
 
 def _format_prompt(prompt: AgentPrompt) -> dict:
@@ -127,7 +130,29 @@ async def _format_test(test_case: TestCase, db: AsyncSession) -> dict:
     messages = await ThreadMessageRepository(db).find_by_thread_id(test_case.thread_id)
     return {
         "name": test_case.thread.name,
-        "messages": messages
+        "messages": messages,
+        "evaluator": await _format_test_evaluator(test_case, db)
+    }
+
+
+async def _format_agent_evaluator(agent: Agent, db: AsyncSession) -> dict:
+    evaluator = await EvaluatorRepository(db).find_by_id(agent.evaluator_id) if agent.evaluator_id else None
+    return await _format_evaluator(evaluator, db)
+
+
+async def _format_test_evaluator(test_case: TestCase, db: AsyncSession) -> dict:
+    evaluator = await EvaluatorRepository(db).find_by_id(test_case.evaluator_id) if test_case.evaluator_id else None
+    return await _format_evaluator(evaluator, db)
+
+
+async def _format_evaluator(evaluator: Optional[Evaluator], db: AsyncSession) -> dict:
+    if not evaluator:
+        return {}
+    evaluator_model = cast(LlmModel, await AiModelRepository(db).find_by_id(evaluator.model_id))
+    return {
+        "model_name": evaluator_model.name,
+        "model_config": _format_model_config(evaluator.temperature, evaluator.reasoning_effort, evaluator_model.model_type),
+        "prompt": evaluator.prompt
     }
 
 
@@ -216,8 +241,22 @@ async def _update_agent(agent: Agent, parsed: Dict[str, Any], zip_file: ZipFile,
     if icon_path in zip_file.namelist():
         update.icon = base64.b64encode(zip_file.read(icon_path)).decode('utf-8')
 
+    if parsed.get('evaluator'):
+        agent.evaluator_id = await _create_new_evaluator(parsed['evaluator'], db)
+
     agent.update_with(update)
     agent = await AgentRepository(db).update(agent)
+
+
+async def _create_new_evaluator(evaluator_dict: Dict[str, Any], db: AsyncSession) -> int:
+    model = await _find_model_by_name(evaluator_dict['model_name'], db)
+    evaluator = await EvaluatorRepository(db).save(Evaluator(
+        model_id=model.id,
+        temperature=LlmTemperature[evaluator_dict['model_config']['Temperature'].upper()] if model.model_type == LlmModelType.CHAT else EVALUATOR_DEFAULT_TEMPERATURE,
+        reasoning_effort=ReasoningEffort[evaluator_dict['model_config']['Reasoning'].upper()] if model.model_type == LlmModelType.REASONING else EVALUATOR_DEFAULT_REASONING_EFFORT,
+        prompt=evaluator_dict['prompt']
+    ))
+    return evaluator.id
 
 
 async def _find_model_by_name(model_name: str, db: AsyncSession) -> LlmModel:
@@ -387,9 +426,11 @@ async def _add_new_test(agent_id: int, test: Dict[str, Any], user_id: int, db: A
         is_test_case=True,
         name=test['name']
     ))
+    evaluator_id = await _create_new_evaluator(test['evaluator'], db) if test.get('evaluator') else None
     await TestCaseRepository(db).save(TestCase(
         thread_id=thread.id,
-        agent_id=agent_id
+        agent_id=agent_id,
+        evaluator_id=evaluator_id
     ))
     for i, msg in enumerate(test['messages']):
         origin = ThreadMessageOrigin.USER if i % 2 == 0 else ThreadMessageOrigin.AGENT

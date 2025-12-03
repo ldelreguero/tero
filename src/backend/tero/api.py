@@ -8,12 +8,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .agents.api import router as agents_router
+from .agents.evaluators.api import router as evaluators_router
 from .agents.prompts.api import router as agents_prompts_router
 from .agents.test_cases.api import router as test_cases_router
 from .ai_models.api import router as ai_models_router
-from .core.env import env
 from .core.api import BASE_PATH
 from .core.domain import CamelCaseModel
+from .core.env import env
 from .external_agents.api import router as external_agents_router
 from .mcp_server import setup_mcp_server
 from .teams.api import router as teams_router
@@ -110,6 +111,7 @@ for router in [
     users_router,
     teams_router,
     external_agents_router,
-    test_cases_router
+    test_cases_router,
+    evaluators_router
 ]:
     app.include_router(router)

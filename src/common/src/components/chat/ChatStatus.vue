@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IconChevronDown } from '@tabler/icons-vue'
 import type { StatusUpdate } from './ChatMessage.vue'
@@ -37,6 +37,8 @@ const toggleExpanded = () => {
 
 const formatStatusAction = (status: StatusUpdate): string => {
   switch (status.action) {
+    case 'statusProcessing':
+      return t('statusProcessing')
     case 'preModelHook':
       return t('statusPreModel')
     case 'planning':
@@ -53,26 +55,32 @@ const formatStatusAction = (status: StatusUpdate): string => {
       return status.action
   }
 }
+
+watch(() => props.isComplete, (newIsComplete) => {
+  if (newIsComplete) {
+    isExpanded.value = false
+  }
+})
 </script>
 
 <template>
   <div v-if="showStatus" class="status-container mb-2">
-    <div v-if="!isComplete" class="flex items-center gap-2 px-3 py-2 border border-auxiliar-gray rounded-lg">
-      <div class="w-3 h-3 border-2 border-auxiliar-gray border-t-transparent rounded-full animate-spin"></div>
-      <span class="text-sm text-light-gray">{{ currentStatusText }}</span>
-    </div>
-    <div v-else class="border border-auxiliar-gray rounded-lg overflow-hidden">
-      <button @click="toggleExpanded"
-        class="w-full flex items-center justify-between px-3 py-2 bg-pale hover:bg-auxiliar-gray transition-colors">
-        <div class="flex items-center gap-2">
+    <div class="border border-auxiliar-gray rounded-lg overflow-hidden">
+      <button @click="toggleExpanded" class="w-full flex items-center justify-between px-3 py-2 bg-pale hover:bg-auxiliar-gray transition-colors":class="{ 'bg-transparent': !isComplete }">
+        <div v-if="!isComplete" class="flex items-center gap-2">
+          <div class="w-3 h-3 border-2 border-auxiliar-gray border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-sm text-light-gray">{{ currentStatusText }}</span>
+        </div>
+        <div v-else class="flex items-center gap-2">
           <img src="@/assets/images/status-icon.svg" alt="status"/>
-          <span class="text-sm font-medium text-light-gray">{{ t('endMessage', { time: thoughtTimeInSeconds }) }}</span>
+          <span class="text-sm font-medium text-light-gray">
+            {{ thoughtTimeInSeconds > 0 ? t('endMessage', { time: thoughtTimeInSeconds }) : t('thoughtProcessMessage') }}
+          </span>
         </div>
         <IconChevronDown :class="['w-4 h-4 transition-transform', { 'rotate-180': isExpanded }]" />
       </button>
-
       <div v-if="isExpanded" class="border-t border-auxiliar-gray">
-        <div class="p-3 space-y-2 max-h-60 overflow-y-auto">
+        <div class="p-3 space-y-2 overflow-y-auto" :class="{ 'max-h-60': isComplete }">
           <div v-for="(status, index) in statusUpdates" :key="index" class="flex items-start gap-2 text-sm">
             <div class="flex-1">
               <div class="font-medium text-lighter-gray">{{ index + 1 }}. {{ formatStatusAction(status) }}</div>
@@ -97,8 +105,10 @@ const formatStatusAction = (status: StatusUpdate): string => {
   </div>
 </template>
 
-<i18n lang="json">{
+<i18n lang="json">
+{
   "en": {
+    "statusProcessing": "Processing",
     "statusPreModel": "Thinking",
     "planning": "Planning to run tools",
     "statusExecutingTool": "Executing {tool}",
@@ -115,16 +125,18 @@ const formatStatusAction = (status: StatusUpdate): string => {
     "analyzed": "Chunks analyzed",
     "groundingResponse": "Validating response",
     "groundedResponse": "Response validated",
-    "withParams": " with params {params}"
+    "withParams": " with params {params}",
+    "thoughtProcessMessage": "Thought process"
   },
   "es": {
+    "statusProcessing": "Procesando",
     "statusPreModel": "Pensando",
     "planning": "Planificando ejecutar herramientas",
     "statusExecutingTool": "Ejecutando {tool}",
     "statusExecutedTool": "Ejecución de herramienta {tool} finalizada",
     "documentsRetrieved": "{count} secciones recuperados",
     "toolError": "Error en la herramienta {tool}",
-    "endMessage": "Penso durante {time} segundos",
+    "endMessage": "Pensó durante {time} segundos",
     "result": "Resultado:",
     "results": "Resultados {count}:",
     "retrieving": "Recuperando secciones",
@@ -134,7 +146,8 @@ const formatStatusAction = (status: StatusUpdate): string => {
     "groundingResponse": "Validando respuesta",
     "groundedResponse": "Respuesta validada",
     "description": "Descripción",
-    "withParams": " con los siguientes parametros {params}"
+    "withParams": " con los siguientes parametros {params}",
+    "thoughtProcessMessage": "Proceso de pensamiento"
   }
-}</i18n>
-
+}
+</i18n>

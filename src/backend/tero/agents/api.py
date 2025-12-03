@@ -17,26 +17,22 @@ from ..files.domain import File, FileStatus, FileUpdate, FileMetadata, FileMetad
 from ..files.file_quota import QuotaExceededError
 from ..files.parser import add_encoding_to_content_type
 from ..files.repos import FileRepository
-from ..threads.domain import Thread, ThreadMessage
-from ..threads.repos import ThreadRepository, ThreadMessageRepository
 from ..tools.core import AgentTool
 from ..tools.oauth import ToolOAuthRequest, build_tool_oauth_request_http_exception
 from ..tools.repos import ToolRepository
-from ..tools.docs.domain import DocToolFile
-from ..tools.docs.repos import DocToolFileRepository
 from ..users.domain import User
 from . import field_generation, distribution
 from .domain import AgentListItem, Agent, AgentUpdate, AgentToolConfig, AutomaticAgentField, PublicAgent
+from .evaluators.repos import EvaluatorRepository
 from .prompts.repos import AgentPromptRepository
 from .repos import AgentRepository, AgentToolConfigRepository, AgentToolConfigFileRepository
+from .test_cases.clone import clone_test_case
 from .test_cases.repos import TestCaseRepository
-from .test_cases.domain import TestCase
 from .tool_file import upload_tool_file
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
 AGENTS_PATH = f"{BASE_PATH}/agents"
 _DEFAULT_FILE_NAME = "uploaded-file"
 DEFAULT_SYSTEM_PROMPT = """You are a helpful AI assistant.
@@ -262,37 +258,16 @@ async def download_agent_tool_file(agent_id: int, tool_id: str, file_id: int,
     ret = await AgentToolConfigFileRepository(db).find_with_content_by_ids(agent_id, tool_id, file_id)
     return build_file_download_response(ret)
 
-class PublicDocToolFile(FileMetadataWithContent, CamelCaseModel):
-    description: str
-        
-    @staticmethod
-    def build(file_metadata: FileMetadataWithContent, doc_tool_file: DocToolFile) -> 'PublicDocToolFile':
-        return PublicDocToolFile(
-            id=file_metadata.id,
-            name=file_metadata.name,
-            content_type=file_metadata.content_type,
-            user_id=file_metadata.user_id,
-            timestamp=file_metadata.timestamp,
-            status=file_metadata.status,
-            description=doc_tool_file.description,
-            processed_content=file_metadata.processed_content,
-            file_processor=file_metadata.file_processor
-        )
-
 
 @router.get(AGENT_TOOL_FILE_PATH)
 async def find_agent_doc_tool_file(agent_id: int, tool_id: str, file_id: int,
         user: Annotated[User, Depends(get_current_user)],
-        db: Annotated[AsyncSession, Depends(get_db)]) -> PublicDocToolFile:
+        db: Annotated[AsyncSession, Depends(get_db)]) -> FileMetadataWithContent:
     await _find_configured_agent_tool(agent_id, tool_id, user, db)
     file_obj = await AgentToolConfigFileRepository(db).find_by_ids(agent_id, tool_id, file_id)
     if not file_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-    file_metadata = FileMetadataWithContent.from_file(file_obj)
-    doc_tool_file = await DocToolFileRepository(db).find_by_agent_id_and_file_id(agent_id, file_id)
-    if not doc_tool_file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doc tool file not found")
-    return PublicDocToolFile.build(file_metadata, doc_tool_file)
+    return FileMetadataWithContent.from_file(file_obj)
 
 
 @router.put(AGENT_TOOL_FILE_PATH, status_code=status.HTTP_202_ACCEPTED)
@@ -355,6 +330,7 @@ async def clone_agent(agent_id: int, user: Annotated[User, Depends(get_current_u
     await _clone_agent_prompts(agent_id, cloned_agent.id, user.id, db)
     await _clone_agent_tools(agent_id, cloned_agent.id, user.id, db)
     await _clone_agent_test_cases(agent_id, cloned_agent.id, user.id, db)
+    await _clone_agent_evaluator(agent, cloned_agent, db)
 
     return PublicAgent.from_agent(cloned_agent, True)
 
@@ -393,36 +369,19 @@ async def _clone_agent_test_cases(agent_id: int, cloned_agent_id: int, user_id: 
     if not test_cases:
         return
     
-    thread_repo = ThreadRepository(db)
-    thread_message_repo = ThreadMessageRepository(db)
-    
     for test_case in test_cases:
-        cloned_thread = await thread_repo.add(
-            Thread(
-                agent_id=cloned_agent_id,
-                user_id=user_id,
-                is_test_case=True,
-                name=test_case.thread.name
-            )
-        )
-        
-        await test_case_repo.save(
-            TestCase(
-                thread_id=cloned_thread.id,
-                agent_id=cloned_agent_id
-            )
-        )
-        
-        original_messages = await thread_message_repo.find_by_thread_id(test_case.thread_id)
-        for message in original_messages:
-            await thread_message_repo.add(
-                ThreadMessage(
-                    thread_id=cloned_thread.id,
-                    origin=message.origin,
-                    text=message.text,
-                    timestamp=message.timestamp
-                )
-            )
+        await clone_test_case(test_case, cloned_agent_id, user_id, db)
+
+
+async def _clone_agent_evaluator(agent: Agent, cloned_agent: Agent, db: AsyncSession) -> None:
+    evaluator_repo = EvaluatorRepository(db)
+    evaluator = await evaluator_repo.find_by_id(agent.evaluator_id) if agent.evaluator_id else None
+    if not evaluator:
+        return
+    
+    cloned_evaluator = await evaluator_repo.save(evaluator.clone())
+    cloned_agent.evaluator_id = cloned_evaluator.id
+    await AgentRepository(db).update(cloned_agent)
 
 
 @router.get(f"{AGENT_PATH}/dist")

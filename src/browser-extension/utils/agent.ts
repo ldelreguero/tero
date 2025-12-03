@@ -12,7 +12,6 @@ export abstract class AgentSource {
   static async loadAgentsFromUrl(url: string): Promise<Agent[]> {
     const agents: Agent[] = []
     const manifest = await Agent.findManifest(url)    
-    console.log("Manifest: ", manifest)
     
     // comparing with agents-hub for backwards compatibility with environments that haven't fully migrated to tero 
     if (manifest.auth && (manifest.auth.clientId === AgentType.TeroAgent || manifest.auth.clientId === "agents-hub")) {

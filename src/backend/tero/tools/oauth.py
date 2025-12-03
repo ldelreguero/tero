@@ -17,7 +17,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from ..core.env import env
 from ..core.repos import scalar, EncryptedField
 
+
 logger = logging.getLogger(__name__)
+
 
 class ToolOAuthTokenType(str, Enum):
     BEARER = "bearer"

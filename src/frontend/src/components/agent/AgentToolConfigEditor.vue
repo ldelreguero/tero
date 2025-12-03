@@ -116,9 +116,13 @@ const toolMessage = computed(() => {
   return ret != toolMessageKey ? ret : null
 })
 
-const isFileProperty = (toolProp: JSONSchema7Definition) : boolean => {
+const isFileArrayProperty = (toolProp: JSONSchema7Definition) : boolean => {
   const toolPropSchema = js7(toolProp)
   return toolPropSchema?.type === 'array' && (js7(toolPropSchema?.items)?.$ref?.endsWith('/File') ?? false)
+}
+
+const isFileProperty = (toolProp: JSONSchema7Definition) : boolean => {
+  return js7(toolProp)?.$ref?.endsWith('/File') ?? false
 }
 
 const isEnumProperty = (toolProp: JSONSchema7Definition) : boolean => {
@@ -259,20 +263,43 @@ class ValidationErrors extends Error {
     <div class="flex flex-col gap-2 mb-4">
       <div v-if="toolMessage" class="text-light-gray text-sm tool-message mb-2" v-html="toolMessage"></div>
       <div v-for="propName in Object.keys(toolProperties)" :key="propName" class="form-field relative">
-        <div v-if="isFileProperty(toolProperties[propName])">
+        <div v-if="isFileArrayProperty(toolProperties[propName]) || isFileProperty(toolProperties[propName])">
           <label :for="propName">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</label>
-          <AgentToolFilesEditor :id="propName" :agent-id="toolConfig.agentId" :tool-id="toolConfig.tool.id" :configured-tool="savedConfig != undefined" :contact-email="contactEmail" :view-mode="viewMode" :on-before-file-upload="onBeforeFileUpload" :on-after-file-remove="onAfterFileRemove"/>
+          <AgentToolFilesEditor
+              :id="propName"
+              :agent-id="toolConfig.agentId"
+              :tool-id="toolConfig.tool.id"
+              :configured-tool="savedConfig != undefined"
+              :contact-email="contactEmail"
+              :view-mode="viewMode"
+              :allowed-extensions="(toolProperties[propName] as any)?.['x-allowed-extensions']"
+              :max-files="isFileProperty(toolProperties[propName]) ? 1 : undefined"
+              :on-before-file-upload="onBeforeFileUpload"
+              :on-after-file-remove="onAfterFileRemove"/>
         </div>
         <div v-else-if="isBooleanProperty(toolProperties[propName])" class="flex items-center gap-2 text-sm">
-          <ToggleSwitch v-model="mutableConfig[propName] as boolean" v-tooltip.bottom="solveToolPropertyTooltip(toolConfig.tool.id, propName, mutableConfig[propName])" :disabled="viewMode" />
+          <ToggleSwitch
+              v-model="mutableConfig[propName] as boolean"
+              v-tooltip.bottom="solveToolPropertyTooltip(toolConfig.tool.id, propName, mutableConfig[propName])"
+              :disabled="viewMode" />
           <span :class="{ 'text-light-gray': !mutableConfig[propName] }">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</span>
         </div>
         <div v-else-if="isEnumProperty(toolProperties[propName])">
-          <AgentToolConfigEnumPropertyEditor v-model="mutableConfig[propName] as string[]" :id="propName" :label="translateToolPropertyName(toolConfig.tool.id, propName)" :option-values="js7(js7(toolProperties[propName])!.items)!.enum as string[]" :option-labels="translateOptionLabel" :view-mode="viewMode"/>
+          <AgentToolConfigEnumPropertyEditor
+              v-model="mutableConfig[propName] as string[]"
+              :id="propName"
+              :label="translateToolPropertyName(toolConfig.tool.id, propName)"
+              :option-values="js7(js7(toolProperties[propName])!.items)!.enum as string[]"
+              :option-labels="translateOptionLabel"
+              :view-mode="viewMode"/>
         </div>
         <div v-else-if="!isBooleanProperty(toolProperties[propName])" class="flex flex-col gap-1">
           <label :for="propName">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</label>
-          <InteractiveInput v-model="mutableConfig[propName] as string" :id="propName" :type="isSecretStringProperty(toolProperties[propName]) ? 'password' : 'text'" :disabled="viewMode"/>
+          <InteractiveInput
+              v-model="mutableConfig[propName] as string"
+              :id="propName"
+              :type="isSecretStringProperty(toolProperties[propName]) ? 'password' : 'text'"
+              :disabled="viewMode"/>
         </div>
       </div>
       <div v-if="validationErrors" class="text-error-alt validation-errors" v-html="validationErrors"></div>

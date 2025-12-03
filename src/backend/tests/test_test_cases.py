@@ -1,12 +1,13 @@
-import json
 from dataclasses import dataclass
+import json
+import re
 from typing import List, cast, Optional
 
 from sse_starlette import ServerSentEvent
 
 from .common import *
 
-from tero.agents.test_cases.api import TEST_CASES_PATH, TEST_CASE_PATH, TEST_CASE_MESSAGES_PATH, TEST_CASE_MESSAGE_PATH, TEST_SUITE_RUN_RESULTS_PATH, TEST_SUITE_RUN_RESULT_MESSAGE_PATH
+from tero.agents.test_cases.api import TEST_CASES_PATH, TEST_CASE_PATH, TEST_CASE_CLONE_PATH, TEST_CASE_MESSAGES_PATH, TEST_CASE_MESSAGE_PATH, TEST_SUITE_RUN_RESULTS_PATH, TEST_SUITE_RUN_RESULT_MESSAGE_PATH
 from tero.agents.test_cases.domain import TestCaseResult, TestCaseResultStatus, NewTestCaseMessage, UpdateTestCaseMessage, PublicTestCase, TestSuiteRun, TestSuiteRunStatus
 from tero.threads.domain import ThreadMessageOrigin, ThreadMessagePublic, Thread
 from tero.tools.core import AgentActionEvent, AgentAction
@@ -18,6 +19,7 @@ TEST_CASE_3_THREAD_ID = 9
 EXECUTION_THREAD_1_ID = 10
 EXECUTION_THREAD_2_ID = 11
 EXECUTION_THREAD_3_ID = 12
+
 
 @dataclass
 class TestCaseExpectation:
@@ -105,6 +107,46 @@ async def test_add_test_case_unauthorized_agent(client: AsyncClient):
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
+@freeze_time(CURRENT_TIME)
+async def test_clone_test_case(client: AsyncClient, test_cases: List[PublicTestCase]):
+    resp = await _clone_test_case(client, AGENT_ID, TEST_CASE_1_THREAD_ID)
+    expected_clone = PublicTestCase(
+        agent_id=AGENT_ID,
+        thread=Thread(
+            id=13,
+            name="Test Case #1 (copy)",
+            user_id=USER_ID,
+            agent_id=AGENT_ID,
+            creation=CURRENT_TIME,
+            is_test_case=True
+        ),
+        last_update=CURRENT_TIME
+    )
+    assert_response(resp, expected_clone)
+
+    resp = await _find_test_cases(client, AGENT_ID)
+    assert_response(resp, [test_cases[0], test_cases[1], expected_clone])
+
+
+async def _clone_test_case(client: AsyncClient, agent_id: int, test_case_id: int) -> Response:
+    return await client.post(TEST_CASE_CLONE_PATH.format(agent_id=agent_id, test_case_id=test_case_id))
+
+
+async def test_clone_test_case_unauthorized_agent(client: AsyncClient):
+    resp = await _clone_test_case(client, NON_VISIBLE_AGENT_ID, TEST_CASE_1_THREAD_ID)
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_clone_test_case_not_found(client: AsyncClient):
+    resp = await _clone_test_case(client, AGENT_ID, 999)
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_clone_test_case_from_another_agent(client: AsyncClient):
+    resp = await _clone_test_case(client, AGENT_ID, TEST_CASE_3_THREAD_ID)
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
 async def test_find_test_case(client: AsyncClient, test_cases: List[PublicTestCase]):
     resp = await _find_test_case(client, AGENT_ID, TEST_CASE_1_THREAD_ID)
     assert_response(resp, test_cases[0])
@@ -160,7 +202,7 @@ async def test_delete_test_case_from_another_agent(client: AsyncClient):
 
 
 async def _assert_test_case_stream(resp: Response, suite_run_id: int, test_cases: List[TestCaseExpectation], 
-                                   skipped_test_case_ids: Optional[List[int]] = None):
+                                   skipped_test_case_ids: Optional[List[int]] = None, remove_analysis_from_response: bool = True):
     buffer, events = [], []
     separator = "\r\n\r\n"
     
@@ -177,6 +219,8 @@ async def _assert_test_case_stream(resp: Response, suite_run_id: int, test_cases
             else:
                 flush_buffer()
                 if event:
+                    if remove_analysis_from_response:
+                        event = re.sub(r'"analysis"\s*:\s*"[^"]*"', '', event)
                     events.append(f"{event}{separator}".encode())
     
     flush_buffer()
@@ -272,7 +316,8 @@ async def _assert_test_case_stream(resp: Response, suite_run_id: int, test_cases
             ServerSentEvent(event="suite.test.complete", data=str(json.dumps({
                 "testCaseId": test_case.test_case_id,
                 "resultId": test_case.result_id,
-                "status": test_case.status.value
+                "status": test_case.status.value,
+                "evaluation": {}
             }))).encode()
         )
     
@@ -301,22 +346,27 @@ async def _assert_test_case_stream(resp: Response, suite_run_id: int, test_cases
 async def test_get_test_case_result(client: AsyncClient):
     suite_run_id = 1
     resp = await _find_suite_run_results(client, AGENT_ID, suite_run_id)
+    analysis = _get_analysis_from_response(resp)
     assert_response(resp, [
-        TestCaseResult(
-            id=2,
-            thread_id=EXECUTION_THREAD_2_ID,
-            test_case_id=TEST_CASE_2_THREAD_ID,
-            test_suite_run_id=suite_run_id,
-            status=TestCaseResultStatus.SUCCESS,
-            executed_at=parse_date("2025-02-21T12:16:00")
-        ),
         TestCaseResult(
             id=1,
             thread_id=EXECUTION_THREAD_1_ID,
             test_case_id=TEST_CASE_1_THREAD_ID,
             test_suite_run_id=suite_run_id,
             status=TestCaseResultStatus.SUCCESS,
-            executed_at=parse_date("2025-02-21T12:15:00")
+            evaluator_analysis=analysis[1],
+            executed_at=parse_date("2025-02-21T12:15:00"),
+            test_case_name="Test Case #1"
+        ),
+        TestCaseResult(
+            id=2,
+            thread_id=EXECUTION_THREAD_2_ID,
+            test_case_id=TEST_CASE_2_THREAD_ID,
+            test_suite_run_id=suite_run_id,
+            status=TestCaseResultStatus.SUCCESS,
+            evaluator_analysis=analysis[0],
+            executed_at=parse_date("2025-02-21T12:16:00"),
+            test_case_name="Test Case #2"
         )
     ])
 
@@ -396,7 +446,8 @@ async def test_find_test_case_messages(client: AsyncClient):
             timestamp=parse_date("2025-02-21T12:10:00"),
             minutes_saved=None,
             stopped=False,
-            files=[]
+            files=[],
+            status_updates=None
         ),
         ThreadMessagePublic(
             id=12,
@@ -406,7 +457,8 @@ async def test_find_test_case_messages(client: AsyncClient):
             timestamp=parse_date("2025-02-21T12:11:00"),
             minutes_saved=None,
             stopped=False,
-            files=[]
+            files=[],
+            status_updates=None
         )
     ])
 
@@ -437,7 +489,8 @@ async def test_add_test_case_message(client: AsyncClient):
             timestamp=parse_date("2025-02-21T12:10:00"),
             minutes_saved=None,
             stopped=False,
-            files=[]
+            files=[],
+            status_updates=None
         ),
         ThreadMessagePublic(
             id=12,
@@ -447,7 +500,8 @@ async def test_add_test_case_message(client: AsyncClient):
             timestamp=parse_date("2025-02-21T12:11:00"),
             minutes_saved=None,
             stopped=False,
-            files=[]
+            files=[],
+            status_updates=None
         ),
         ThreadMessagePublic(
             id=23,
@@ -457,7 +511,8 @@ async def test_add_test_case_message(client: AsyncClient):
             timestamp=CURRENT_TIME,
             minutes_saved=None,
             stopped=False,
-            files=[]
+            files=[],
+            status_updates=None
         )
     ]
     resp = await _add_test_case_message(client, AGENT_ID, TEST_CASE_1_THREAD_ID, message_data)
@@ -491,7 +546,8 @@ async def test_update_test_case_message(client: AsyncClient):
         timestamp=parse_date("2025-02-21T12:10:00"),
         minutes_saved=None,
         stopped=False,
-        files=[]
+        files=[],
+        status_updates=None
     ))
 
 
@@ -532,6 +588,38 @@ async def test_update_message_from_execution_thread(client: AsyncClient):
 async def test_update_message_from_different_test_case_same_agent(client: AsyncClient):
     resp = await _update_test_case_message(client, AGENT_ID, TEST_CASE_1_THREAD_ID, 13, UpdateTestCaseMessage(text="Trying to modify different test case message"))
     assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_generate_test_case_name_after_messages(client: AsyncClient):
+    create_resp = await _add_test_case(AGENT_ID, client)
+    create_resp.raise_for_status()
+    new_test_case = create_resp.json()
+    new_test_case_id = new_test_case["thread"]["id"]
+
+    user_message_resp = await _add_test_case_message(
+        client,
+        AGENT_ID,
+        new_test_case_id,
+        NewTestCaseMessage(text="Reset the password for user Alice.", origin=ThreadMessageOrigin.USER),
+    )
+    user_message_resp.raise_for_status()
+
+    test_case_resp = await _find_test_case(client, AGENT_ID, new_test_case_id)
+    assert test_case_resp.json()["thread"]["name"].startswith("Test Case #")
+
+    agent_message_resp = await _add_test_case_message(
+        client,
+        AGENT_ID,
+        new_test_case_id,
+        NewTestCaseMessage(
+            text="The password was reset successfully and an email confirmation was sent.",
+            origin=ThreadMessageOrigin.AGENT,
+        ),
+    )
+    agent_message_resp.raise_for_status()
+
+    updated_test_case_resp = await _find_test_case(client, AGENT_ID, new_test_case_id)
+    assert not updated_test_case_resp.json()["thread"]["name"].startswith("Test Case #")
 
 
 async def test_find_test_case_runs(client: AsyncClient):
@@ -590,22 +678,27 @@ async def test_run_test_suite_with_specific_test_cases(client: AsyncClient, last
         )
     
     resp = await _find_suite_run_results(client, AGENT_ID, expected_suite_run_id)
+    analysis = _get_analysis_from_response(resp)
     assert_response(resp, [
-        TestCaseResult(
-            id=5,
-            thread_id=None,
-            test_case_id=TEST_CASE_2_THREAD_ID,
-            test_suite_run_id=expected_suite_run_id,
-            status=TestCaseResultStatus.SKIPPED,
-            executed_at=CURRENT_TIME
-        ),
         TestCaseResult(
             id=expected_result_id,
             thread_id=last_thread_id + 1,
             test_case_id=TEST_CASE_1_THREAD_ID,
             test_suite_run_id=expected_suite_run_id,
             status=TestCaseResultStatus.SUCCESS,
-            executed_at=CURRENT_TIME
+            evaluator_analysis=analysis[0],
+            executed_at=CURRENT_TIME,
+            test_case_name="Test Case #1"
+        ),
+        TestCaseResult(
+            id=5,
+            thread_id=None,
+            test_case_id=TEST_CASE_2_THREAD_ID,
+            test_suite_run_id=expected_suite_run_id,
+            status=TestCaseResultStatus.SKIPPED,
+            evaluator_analysis=analysis[1],
+            executed_at=CURRENT_TIME,
+            test_case_name="Test Case #2"
         )
     ])
 
@@ -654,22 +747,27 @@ async def test_run_test_suite_with_all_test_cases(client: AsyncClient, last_thre
         )
     
     resp = await _find_suite_run_results(client, AGENT_ID, expected_suite_run_id)
+    analysis = _get_analysis_from_response(resp)
     assert_response(resp, [
-        TestCaseResult(
-            id=result_id_2,
-            thread_id=last_thread_id + 2,
-            test_case_id=TEST_CASE_2_THREAD_ID,
-            test_suite_run_id=expected_suite_run_id,
-            status=TestCaseResultStatus.SUCCESS,
-            executed_at=CURRENT_TIME
-        ),
         TestCaseResult(
             id=result_id_1,
             thread_id=last_thread_id + 1,
             test_case_id=TEST_CASE_1_THREAD_ID,
             test_suite_run_id=expected_suite_run_id,
             status=TestCaseResultStatus.SUCCESS,
-            executed_at=CURRENT_TIME
+            evaluator_analysis=analysis[0],
+            executed_at=CURRENT_TIME,
+            test_case_name="Test Case #1"
+        ),
+        TestCaseResult(
+            id=result_id_2,
+            thread_id=last_thread_id + 2,
+            test_case_id=TEST_CASE_2_THREAD_ID,
+            test_suite_run_id=expected_suite_run_id,
+            status=TestCaseResultStatus.SUCCESS,
+            evaluator_analysis=analysis[1],
+            executed_at=CURRENT_TIME,
+            test_case_name="Test Case #2"
         )
     ])
 
@@ -687,3 +785,7 @@ async def test_run_test_suite_unauthorized_agent(client: AsyncClient):
     request_body = {"test_case_ids": [TEST_CASE_1_THREAD_ID]}
     resp = await _run_test_suite_sync(client, NON_VISIBLE_AGENT_ID, request_body)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+def _get_analysis_from_response(response: Response) -> list[str]:
+    return [obj.get("evaluatorAnalysis", "") for obj in response.json()]

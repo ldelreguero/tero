@@ -20,8 +20,8 @@ from ..core.env import env
 from ..core.repos import get_db
 from ..files.api import build_file_download_response
 from ..files.domain import File, FileStatus, FileMetadata, FileProcessor, FileMetadataWithContent
-from ..files.parser import add_encoding_to_content_type, extract_file_text
 from ..files.file_quota import FileQuota, CurrentQuota, QuotaExceededError
+from ..files.parser import add_encoding_to_content_type, extract_file_text
 from ..files.repos import FileRepository
 from ..tools.oauth import ToolOAuthRequest, build_tool_oauth_request_http_exception
 from ..usage.domain import Usage, UsageType, MessageUsage    
@@ -31,14 +31,13 @@ from .domain import ThreadListItem, Thread, ThreadMessage, ThreadMessageOrigin, 
     ThreadMessagePublic, ThreadMessageFile, ThreadMessageUpdate, AgentActionEvent, AgentFileEvent,\
     AgentMessageEvent, ThreadTranscriptionResult
 from .engine import build_thread_name, AgentEngine
-from .time_saved_estimation import estimate_minutes_saved
 from .repos import ThreadRepository, ThreadMessageRepository, ThreadMessageFileRepository
+from .time_saved_estimation import estimate_minutes_saved
 
-
-THREADS_PATH = f"{BASE_PATH}/threads"
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+THREADS_PATH = f"{BASE_PATH}/threads"
 active_streaming_connections: dict[int, asyncio.Event] = {}
 
 
@@ -242,8 +241,11 @@ async def _agent_response(message: ThreadMessage, thread: Thread, user_id: int, 
         answer_stream = AgentEngine(thread.agent, user_id, db).answer([*thread_messages, message], message_usage, stop_event)
         complete_answer = ""
         files: List[FileMetadata] = []
+        status_updates: List[AgentActionEvent] = []
+
         async for event in answer_stream:
             if isinstance(event, AgentActionEvent):
+                status_updates.append(event)
                 payload = json.dumps(event.model_dump(mode="json", by_alias=True))
                 yield ServerSentEvent(event="status", data=payload).encode()
             elif isinstance(event, AgentFileEvent):
@@ -272,7 +274,8 @@ async def _agent_response(message: ThreadMessage, thread: Thread, user_id: int, 
             origin=ThreadMessageOrigin.AGENT,
             parent_id=message.id,
             minutes_saved=minutes_saved,
-            stopped=stop_event.is_set()
+            stopped=stop_event.is_set(),
+            status_updates=[event.model_dump(mode="json", by_alias=True) for event in status_updates] if status_updates else None
         ))
         for f in files:
             await ThreadMessageFileRepository(db).add(ThreadMessageFile(thread_message_id=answer.id, file_id=f.id))

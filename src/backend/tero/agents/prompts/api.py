@@ -7,8 +7,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from ...core.api import BASE_PATH
 from ...core.auth import get_current_user
 from ...core.repos import get_db
-from ...users.domain import User
 from ...teams.domain import Role, Team
+from ...users.domain import User
 from ..api import find_agent_by_id
 from ..domain import Agent
 from .domain import AgentPrompt, AgentPromptCreate, AgentPromptPublic, AgentPromptUpdate
@@ -16,7 +16,6 @@ from .repos import AgentPromptRepository
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
 AGENT_PROMPTS_PATH = f"{BASE_PATH}/agents/{{agent_id}}/prompts"
 AGENT_PROMPT_PATH = f"{BASE_PATH}/agents/{{agent_id}}/prompts/{{prompt_id}}"
 

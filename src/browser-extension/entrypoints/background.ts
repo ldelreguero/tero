@@ -1,13 +1,13 @@
 import { browser } from 'wxt/browser';
 import { type Browser } from 'wxt/browser';
-import { Agent, RequestEvent, RequestEventType} from "~/utils/agent";
-import { findAllAgents, findAgentById, removeAllAgents, } from "~/utils/agent-repository";
+import { Agent, RequestEvent, RequestEventType } from "~/utils/agent";
+import { findAllAgents, findAgentById, removeAllAgents } from "~/utils/agent-repository";
 import { AgentSession } from "~/utils/agent-session";
-import { findAgentSession, saveAgentSession, removeAgentSession, } from "~/utils/agent-session-repository";
+import { findAgentSession, saveAgentSession, removeAgentSession } from "~/utils/agent-session-repository";
 import { AgentSource } from "~/utils/agent";
-import { BrowserMessage, ToggleSidebar, ActiveTabListener, ActivateAgent, AgentActivation, InteractionSummary, } from "~/utils/browser-message";
+import { BrowserMessage, ToggleSidebar, ActiveTabListener, ActivateAgent, AgentActivation, InteractionSummary } from "~/utils/browser-message";
 import { HttpServiceError } from "~/utils/http";
-import { isActiveTabListener, setTabListenerActive, removeTabListenerStatus, } from "~/utils/tab-listener-status-repository";
+import { isActiveTabListener, setTabListenerActive, removeTabListenerStatus } from "~/utils/tab-listener-status-repository";
 import { removeTabState } from "~/utils/tab-state-repository";
 
 export default defineBackground(() => {
@@ -17,7 +17,6 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(async () => {
     await removeAllAgents()
     createToggleContextMenu();
-    console.log("onInstalled", import.meta.env.DEV)
     if (import.meta.env.DEV) { 
       try {
         await AgentSource.loadAgentsFromUrl("http://localhost:8000");

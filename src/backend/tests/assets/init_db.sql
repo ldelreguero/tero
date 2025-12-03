@@ -102,10 +102,10 @@ insert into test_suite_run (agent_id, status, executed_at, completed_at, total_t
 (1, 'SUCCESS', '2025-02-21 12:15', '2025-02-21 12:17', 2, 2, 0, 0, 0),
 (2, 'FAILURE', '2025-02-21 12:17', '2025-02-21 12:18', 1, 0, 0, 1, 0);
 
-insert into test_case_result (thread_id, test_case_id, test_suite_run_id, status, executed_at) values
-(10, 7, 1, 'SUCCESS', '2025-02-21 12:15'),
-(11, 8, 1, 'SUCCESS', '2025-02-21 12:16'),
-(12, 9, 2, 'ERROR', '2025-02-21 12:17');
+insert into test_case_result (thread_id, test_case_id, test_suite_run_id, status, executed_at, test_case_name) values
+(10, 7, 1, 'SUCCESS', '2025-02-21 12:15', 'Test Case #1'),
+(11, 8, 1, 'SUCCESS', '2025-02-21 12:16', 'Test Case #2'),
+(12, 9, 2, 'ERROR', '2025-02-21 12:17', 'Test Case #3');
 
 insert into usage (message_id, user_id, agent_id, model_id, timestamp, quantity, usd_cost, type) values
 (2, 1, 1, 'gpt-4o-mini', '2025-02-21 12:00', 100, 0.5, 'PROMPT_TOKENS'),

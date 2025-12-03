@@ -6,8 +6,10 @@ from sqlmodel import Relationship, SQLModel, Field
 
 from ..core.domain import CamelCaseModel
 
+
 MY_TEAM_ID = 0
 GLOBAL_TEAM_ID = 1
+
 
 class Role(str, Enum):
     TEAM_OWNER = "owner"
@@ -22,6 +24,7 @@ class Team(SQLModel, table=True):
  
 class TeamRoleUpdate(BaseModel):
     role: Role
+
 
 class TeamRoleStatus(str, Enum):
     ACCEPTED = "accepted"
@@ -53,6 +56,7 @@ class AddUsersToTeam(CamelCaseModel):
     username: str
     role: Role
 
+
 class TeamUser(CamelCaseModel):
     id: int
     username: str 
@@ -61,8 +65,10 @@ class TeamUser(CamelCaseModel):
     role_status: TeamRoleStatus
     verified: bool = False
 
+
 class TeamUpdate(CamelCaseModel):
     name: str
+
 
 class TeamCreate(TeamUpdate):
     users: Optional[List[AddUsersToTeam]] = None

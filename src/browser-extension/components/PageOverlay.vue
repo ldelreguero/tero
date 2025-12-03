@@ -22,5 +22,6 @@ import headerBg from '../assets/header.webp'
             <slot name="content" />
         </main>
         <slot name="modalsContainer" />
+        <slot name="footer" />
     </div>
 </template>
