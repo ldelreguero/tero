@@ -14,6 +14,7 @@ GLOBAL_TEAM_ID = 1
 class Role(str, Enum):
     TEAM_OWNER = "owner"
     TEAM_MEMBER = "member"
+    TEAM_EDITOR = "editor"
 
 
 class Team(SQLModel, table=True):

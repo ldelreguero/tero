@@ -80,7 +80,10 @@ class Agent(BaseAgent, table=True):
         return self.user_id == user.id or user.is_member_of(cast(int, self.team_id))
 
     def is_editable_by(self, user: User) -> bool:
-        return self.user_id == user.id or any(tr.role == Role.TEAM_OWNER and cast(Team, tr.team).id == self.team_id for tr in user.team_roles)
+        return self.user_id == user.id or any(
+            tr.role in [Role.TEAM_OWNER, Role.TEAM_EDITOR] and cast(Team, tr.team).id == self.team_id 
+            for tr in user.team_roles
+        )
 
     def clone(self, user_id: int) -> "Agent":
         base_name = (self.name or "").strip()

@@ -2,7 +2,7 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, onBeforeRouteUpdate, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Agent, ApiService, LlmModel, AgentToolConfig, AutomaticAgentField, Team, TestCase, TestSuiteRun } from '@/services/api'
+import { Agent, ApiService, LlmModel, AgentToolConfig, AutomaticAgentField, Team, TestCase, TestSuiteRun, GLOBAL_TEAM_ID, Role, TeamRoleStatus, findManifest } from '@/services/api'
 import { IconPlayerPlay, IconPencil, IconDownload, IconUpload, IconListDetails } from '@tabler/icons-vue'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useAgentStore } from '@/composables/useAgentStore'
@@ -60,7 +60,7 @@ const publishPrompts = ref(false)
 const privatePromptsCount = computed(() => agentsPromptStore.prompts.filter(p => !p.shared).length)
 const isLoading = ref(true)
 const teams = ref<Team[]>([])
-const defaultTeams = ref<Team[]>([new Team(0, t('private')), new Team(1, t('global'))])
+const defaultTeams = ref<Team[]>([new Team(0, t('private'))])
 const selectedTeam = ref<number | null>(null)
 const activeTab = ref<string>('0')
 const showImportAgent = ref(false)
@@ -92,8 +92,15 @@ const loadPromptStarters = async (agentId: number) => {
 onMounted(async () => {
   try {
     models.value = await api.findModels()
+    const manifest = await findManifest()
     const user = await loadUserProfile()
+
+    if (!manifest.disablePublishGlobal || user!.teams.some(t => t.role === Role.TEAM_OWNER && t.id === GLOBAL_TEAM_ID && t.status === TeamRoleStatus.ACCEPTED)) {
+      defaultTeams.value.push(new Team(GLOBAL_TEAM_ID, t('global')))
+    }
+
     teams.value = [...defaultTeams.value, ...user!.teams.filter(t => !defaultTeams.value.some(dt => dt.id === t.id))];
+
     if (route.params.agentId) {
       await loadAgentData(route.params.agentId as string)
     }
@@ -259,6 +266,8 @@ watch(activeTab, (newVal) => {
 
 const isSelectedPublicTeam = computed(() => selectedTeam.value != null && selectedTeam.value > 0)
 
+const hasPublishableTeams = computed(() => teams.value.some(t => t.id > 0))
+
 const shareDialogTranslationKey = computed(() => {
   if (invalidAttrs.value) {
     return isSelectedPublicTeam.value ? 'shareInvalidAttrs' : 'unshareInvalidAttrs'
@@ -379,7 +388,7 @@ const onSelectExecution = (execution: TestSuiteRun) => {
               <div class="form-field !flex-row gap-3 items-center">
                 <label for="visibility">{{ t('visibilityLabel') }}</label>
                 <UserTeamsSelect id="visibility" v-model="selectedTeam" :default-teams="defaultTeams" :default-selected-team="selectedTeam"
-                  @change="onChangeTeam" />
+                  @change="onChangeTeam" :disabled="!hasPublishableTeams" />
               </div>
             </div>
             <div class="form-field relative">

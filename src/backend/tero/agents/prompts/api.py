@@ -37,7 +37,15 @@ def _map_public_prompt(agent: Agent, user: User, prompt: AgentPrompt):
 
 
 def _is_editable_prompt(prompt: AgentPrompt, agent: Agent, user: User) -> bool:
-    return prompt.user_id == user.id or (prompt.shared and (agent.user_id == user.id or (agent.team_id is not None and any(tr.role == Role.TEAM_OWNER and cast(Team, tr.team).id == agent.team_id for tr in user.team_roles))))
+    return prompt.user_id == user.id or (
+        prompt.shared and (
+            agent.user_id == user.id or 
+            (agent.team_id is not None and any(
+                tr.role in [Role.TEAM_OWNER, Role.TEAM_EDITOR] and cast(Team, tr.team).id == agent.team_id 
+                for tr in user.team_roles
+            ))
+        )
+    )
 
 
 @router.post(AGENT_PROMPTS_PATH, response_model=AgentPromptPublic, status_code=status.HTTP_201_CREATED)

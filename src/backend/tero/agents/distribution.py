@@ -196,7 +196,7 @@ async def update_agent_from_zip(agent: Agent, zip_content: bytes, user: User, db
         await _update_tests(agent.id, parsed.get('tests', []), user.id, db)
         return agent
 
-    
+
 def _open_zip_file(zip_content: bytes) -> ZipFile:
     zip_bytes = BytesIO(zip_content)
     try:

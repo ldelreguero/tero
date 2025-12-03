@@ -16,10 +16,9 @@ export abstract class AgentSource {
     // comparing with agents-hub for backwards compatibility with environments that haven't fully migrated to tero 
     if (manifest.auth && (manifest.auth.clientId === AgentType.TeroAgent || manifest.auth.clientId === "agents-hub")) {
       const authService = new AuthService(manifest.auth!)
-      await authService.login()
+      await authService.ensureAuthenticated()
       const tero = new TeroServer(url, manifest)
       agents.push(...await tero.findAgents(authService))
-      console.log("loaded agents", agents)
     } else {
       agents.push(new StandaloneAgent(url, manifest))
     }

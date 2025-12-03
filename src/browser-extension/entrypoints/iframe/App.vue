@@ -11,6 +11,7 @@ import { findTabState, saveTabState } from '~/utils/tab-state-repository'
 import { findAgentSession } from '~/utils/agent-session-repository'
 import { FlowStepError } from '~/utils/flow'
 import { HttpServiceError } from '~/utils/http'
+import { AuthService } from '~/utils/auth'
 import ToastMessage from '~/components/ToastMessage.vue'
 import CopilotChat from '~/components/CopilotChat.vue'
 import CopilotList from '~/components/CopilotList.vue'
@@ -180,11 +181,18 @@ const onActivateAgent = async (agentId: string) => {
   sendToServiceWorker(new ActivateAgent(agentId, tab.url!))
 }
 
-const onAgentActivation = (msg: AgentActivation) => {
+const onAgentActivation = async (msg: AgentActivation) => {
   if (displayMode.value === TabDisplayMode.CLOSED) {
     onToggleSidebar()
   }
   if (!msg.success) {
+    if (msg.errorStatus === 401 && msg.agent.manifest.auth) {
+      const authService = new AuthService(msg.agent.manifest.auth)
+      await authService.ensureAuthenticated()
+      await onActivateAgent(msg.agent.manifest.id!)
+      return
+    }
+
     const text = t('activationError', { agentName: msg.agent.manifest.name, contactEmail: msg.agent.manifest.contactEmail })
     toast.error({ component: ToastMessage, props: { message: text } }, { icon: IconAlertCircleFilled })
   } else {

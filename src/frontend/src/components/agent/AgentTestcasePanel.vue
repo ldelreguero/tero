@@ -381,10 +381,10 @@ defineExpose({
               <div v-else class="flex gap-2 items-center">
                   <IconLoader2 v-if="isRunning" class="text-light-gray animate-spin" />
                   <div v-if="testCaseResult" class="flex flex-row items-center gap-2">
-                    <IconSquareCheckFilled class="text-success" v-if="testCaseResult.status === TestCaseResultStatus.SUCCESS" />
-                    <IconSquareXFilled class="text-error" v-if="testCaseResult.status === TestCaseResultStatus.FAILURE" />
-                    <IconExclamationMark class="text-white bg-warn rounded-sm p-0.5" size="20" v-if="testCaseResult.status === TestCaseResultStatus.ERROR" />
-                    <IconSquareChevronsRightFilled class="text-light-gray" v-if="testCaseResult.status === TestCaseResultStatus.SKIPPED" />
+                    <IconSquareCheckFilled class="text-success" v-if="testCaseResult.status === TestCaseResultStatus.SUCCESS" v-tooltip.bottom="t('success')" />
+                    <IconSquareXFilled class="text-error" v-if="testCaseResult.status === TestCaseResultStatus.FAILURE" v-tooltip.bottom="t('failure')" />
+                    <IconExclamationMark class="text-white bg-warn rounded-sm p-0.5" size="20" v-if="testCaseResult.status === TestCaseResultStatus.ERROR" v-tooltip.bottom="t('error')" />
+                    <IconSquareChevronsRightFilled class="text-light-gray" v-if="testCaseResult.status === TestCaseResultStatus.SKIPPED" v-tooltip.bottom="t('skipped')" />
                     {{ testCaseResult ? isRunning ? t('runningTestCase', { testCaseName: testCaseResult.testCaseName }) : t('testCaseResult', { testCaseName: testCaseResult.testCaseName }) : t('noRunResults') }}
                 </div>
               </div>
@@ -435,20 +435,22 @@ defineExpose({
                     </ChatInput>
                 </div>
                 <div v-else-if="!isEditing && (testCaseResult || executionState)"
-                    class="h-40 min-h-40 flex-shrink-0 border-t-1 border-auxiliar-gray p-4 overflow-y-auto">
-                    <div class="flex flex-col gap-4">
+                    class="h-40 min-h-40 flex-shrink-0 border-t-1 border-auxiliar-gray p-4">
+                    <div class="flex flex-col gap-4 h-full">
                         <AgentTestcaseStatus v-if="!isRunning && testCaseResult" :status="testCaseResult.status" />
-                        <div v-if="executionState && (executionState.phase === 'executing' || executionState.phase === 'evaluating')" class="flex flex-row items-center gap-2">
-                            <IconLoader2 class="text-light-gray animate-spin" />
-                            <span v-if="executionState.phase === 'executing'">{{ t('phaseExecuting') }}</span>
-                            <span v-else>{{ t('phaseEvaluating') }}</span>
-                        </div>
-                        <div v-else-if="isRunning" class="flex flex-row items-center gap-2">
-                            <IconLoader2 class="text-light-gray animate-spin" />
-                            <span>{{ t('testRunning') }}</span>
-                        </div>
-                        <div v-else-if="testCaseResult" class="flex flex-row items-center gap-2">
-                            {{ statusDescription }}
+                        <div class="h-full overflow-y-auto">
+                            <div v-if="executionState && (executionState.phase === 'executing' || executionState.phase === 'evaluating')" class="flex flex-row items-center gap-2">
+                                <IconLoader2 class="text-light-gray animate-spin" />
+                                <span v-if="executionState.phase === 'executing'">{{ t('phaseExecuting') }}</span>
+                                <span v-else>{{ t('phaseEvaluating') }}</span>
+                            </div>
+                            <div v-else-if="isRunning" class="flex flex-row items-center gap-2">
+                                <IconLoader2 class="text-light-gray animate-spin" />
+                                <span>{{ t('testRunning') }}</span>
+                            </div>
+                            <div v-else-if="testCaseResult" class="flex flex-row items-center gap-2">
+                                {{ statusDescription }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -478,7 +480,11 @@ defineExpose({
         "compare": "Compare with specification",
         "closeCompare": "Close compare",
         "compareDisabledReasonTestModified": "Compare is disabled because the test case was modified after the test execution",
-        "compareDisabledReasonTestDeleted": "Compare is disabled because the test case was deleted"
+        "compareDisabledReasonTestDeleted": "Compare is disabled because the test case was deleted",
+        "success": "Success",
+        "failure": "Failed",
+        "error": "Error running",
+        "skipped": "Skipped"
     },
     "es": {
         "newTestCaseTitle": "Crea un nuevo test case",
@@ -499,7 +505,11 @@ defineExpose({
         "compare": "Comparar con la especificación",
         "closeCompare": "Cerrar comparación",
         "compareDisabledReasonTestModified": "La comparación está deshabilitada porque el test case fue modificado después de la ejecución del test",
-        "compareDisabledReasonTestDeleted": "La comparación está deshabilitada porque el test case fue eliminado"
+        "compareDisabledReasonTestDeleted": "La comparación está deshabilitada porque el test case fue eliminado",
+        "success": "Pasó",
+        "failure": "Falló",
+        "error": "Error al ejecutar",
+        "skipped": "Omitido"
     }
 }
 </i18n>

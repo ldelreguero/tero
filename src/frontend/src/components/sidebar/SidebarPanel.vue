@@ -34,7 +34,6 @@ const filterModeIsActive = computed(() => showingSearchInput.value && searchQuer
 const displayedAgents = computed(() => filterModeIsActive.value && !sidebarSearchRef.value?.isSearching ? searchResults.value.agents : agentsStore.agents);
 const displayedChats = computed(() => filterModeIsActive.value && !sidebarSearchRef.value?.isSearching ? searchResults.value.chats : chatsStore.chats);
 
-
 onMounted(async () => {
   try {
     isLoading.value = true;
@@ -132,24 +131,24 @@ const logout = () => {
 
       <div v-if="!isSidebarCollapsed" class="mt-5">
         <div class="sticky top-0 bg-white z-10">
-            <div class="flex justify-between items-center p-2">
-              <div class="flex items-center gap-1 text-sm">
-                <button @click="chatsCollapsed = !chatsCollapsed">
-                  <component :is="chatsCollapsed ? IconChevronDown : IconChevronUp" class="w-5 h-5" />
-                </button>
-                <span class="text-light-gray">{{ t('chats') }}</span>
-              </div>
-              <SimpleButton
-                size="small"
-                @click="newChat"
-                v-tooltip.bottom="t('newChatTooltip', { name: defaultAgentName })"
-                class="hover:text-primary! hover:bg-transparent! border-0! ring-0! outline-0! shadow-none! text-sm font-semibold gap-1"
-              >
-                <IconPlus class="w-5 h-5"/>
-                <p class="underline underline-offset-2">{{ t('newChat') }}</p>
-              </SimpleButton>
+          <div class="flex justify-between items-center p-2">
+            <div class="flex items-center gap-1 text-sm">
+              <button @click="chatsCollapsed = !chatsCollapsed">
+                <component :is="chatsCollapsed ? IconChevronDown : IconChevronUp" class="w-5 h-5" />
+              </button>
+              <span class="text-light-gray">{{ t('chats') }}</span>
             </div>
+            <SimpleButton
+              size="small"
+              @click="newChat"
+              v-tooltip.bottom="t('newChatTooltip', { name: defaultAgentName })"
+              class="hover:text-primary! hover:bg-transparent! border-0! ring-0! outline-0! shadow-none! text-sm font-semibold gap-1"
+            >
+              <IconPlus class="w-5 h-5"/>
+              <p class="underline underline-offset-2">{{ t('newChat') }}</p>
+            </SimpleButton>
           </div>
+        </div>
 
         <div v-if="!chatsCollapsed">
           <SidebarChat v-for="chat in displayedChats" :key="chat.id" :chat="chat" />

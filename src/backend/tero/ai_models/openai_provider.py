@@ -38,6 +38,7 @@ class OpenAIProvider(AiModelProvider):
             api_key=env.openai_api_key,
             model=env.openai_model_id_mapping[model])
 
+
 class ReasoningTokenCountingChatOpenAI(ChatOpenAI):
 
     # we override this method which is the one used by get_num_tokens_from_messages to count the tokens

@@ -163,6 +163,11 @@ const onCloneTestCase = async (testCase: TestCase) => {
                         <div class="flex flex-row items-center gap-2">
                             <SimpleMenu :items="[
                                 {
+                                    label: t('runTestCaseMenuItem'),
+                                    tablerIcon: IconPlayerPlay,
+                                    command: () => emit('runTestCase', testCase.thread.id),
+                                },
+                                {
                                     label: t('renameTestCaseTooltip'),
                                     tablerIcon: IconPencil,
                                     command: () => onRenameTestCase(testCase)
@@ -173,19 +178,14 @@ const onCloneTestCase = async (testCase: TestCase) => {
                                     command: () => onCloneTestCase(testCase)
                                 },
                                 {
-                                    label: t('deleteTestCaseTooltip'),
-                                    tablerIcon: IconTrash,
-                                    command: () => onDeleteTestCase(testCase)
-                                },
-                                {
-                                    label: t('runTestCaseMenuItem'),
-                                    tablerIcon: IconPlayerPlay,
-                                    command: () => emit('runTestCase', testCase.thread.id),
-                                },
-                                {
                                     label: t('configureTestEvaluator'),
                                     tablerIcon: IconSettings,
                                     command: () => handleConfigureEvaluator(testCase.thread.id),
+                                },
+                                {
+                                    label: t('deleteTestCaseTooltip'),
+                                    tablerIcon: IconTrash,
+                                    command: () => onDeleteTestCase(testCase)
                                 }
                             ]" />
                         </div>

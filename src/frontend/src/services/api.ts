@@ -4,7 +4,6 @@ import type { JSONSchema7 } from 'json-schema'
 import { UploadedFile, FileStatus, AgentPrompt } from '../../../common/src/utils/domain'
 import type { StatusUpdate } from '../../../common/src/components/chat/ChatMessage.vue'
 
-
 export class HttpError extends Error {
   public status: number
   public body: string
@@ -31,24 +30,21 @@ export class Manifest {
   id: string
   contactEmail: string
   auth: ManifestAuthConfig
+  disablePublishGlobal: boolean
 
-  constructor(id: string, contactEmail: string, auth: ManifestAuthConfig) {
+  constructor(id: string, contactEmail: string, auth: ManifestAuthConfig, disablePublishGlobal: boolean) {
     this.id = id
     this.contactEmail = contactEmail
     this.auth = auth
+    this.disablePublishGlobal = disablePublishGlobal
   }
 }
 
 export const GLOBAL_TEAM_ID = 1;
-
 export const MY_TEAM_ID = 0;
-
 export const PRIVATE_TEAM_ID = -1;
-
 export const PRIVATE_AGENT_ID = -1;
-
 const PRIVATE_AGENT_ICON_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAA+NJREFUaEPtmU2IV2UUxn9PaRFoGBkVmKZ9GFFEpQRWRh+LkDYhCUVBklGR9iW5KVoMtXGIMfowWohQaKjUrlWEWS2KgsQ2ZaGDRSGlWBJl2uk+cAYGnZn/e+feYf4T/wPDfxbvfd/z3POec57zXDHFTVPcf3oAJjuCvQj8LyMQEacB04HTE+Bx4Likf9sG3OoViogzgDnAZcBiYAEQwLfAXuAbYFDSsbaAtAYgIs4F7gZWpPOzTnLyL+AL4G3gfUm/tQGiFQARcU51ZV4C7gFmA/8A+4Ef0slLgIvzWv0KbK/WPCfpcFMQbQHoB9YAZ6bTbwAfA4fSwfOApcBDwBXA38Crkp6ddAARcRuwrXLIV+h74DFg1/B7HhF+UU5qg9gIXFoB9hVaIemjJiAaRSCrzbvAcuBP4BFJW8ZyKCJWARsAJ/xbVZSeaFKdmgKYD+wArgO+Bm6XNHRtRsQREWcBnwHXAl868SX9ON4oNAWwBNgELPRblfR0iSMRMQA8lVfuYUk7S54baU1TAMuA17PCrJPkZO5oEeHkXZ+V6nFJH3R8aJQFPQC9CEDvCtXOn4hwx51XcRsn8TrgQnfW5Dkl+z2QnfvnTGYnsUmeO3Qtq53EEXF1VT0eBPxrEP4zoAPAL4WnXwBclJRi0M5XzXBPVc02S/JvsdUCEBFXVTV/K3B5dtLigwoWmmJ/V1HveyWZdhdZXQAmaOYzHlB2Z0etHfaTPHP03Mk9P/h/86hbiryHclUiIhYBHwIzgPeS9zSmw3Y06fg7wJ3AH8AdkkwzOlpxBCLC995d18+slWRW2ZpFhFnsyznBubRuLtl8PAC8b/EBJU5kFIZeUK39JwxARHg29iTmQX63pN/HAjMswpMPICJuqBL9+WSpdsilcb2kz0cD0TUAIsJJbrq8cpisciLn4GckuXmdYt0E4JpqsH+tqlg3pYxiZ90/PgVWS3L57WoAVyaAW4F96aknN5dgJ7+bVVcDsB7kgcUqxcz01LXdw06/JOtD3QsgS6L50V3Azdk3PC9vkWTOM6J1TQ4MeZcyo0Uul+ojko5OmTI6lqOTGYH7gTezNLrGDzTRc4YDSX3JKsWL2fgelWRu1NHqdGKraZ9Uytr5qeesBX7KAzseNMYCS/FzgT7gRuCgc0eSVb6OVgwgk9OK2pMp3rpEWsA1tW5i03K+MAiDeUWSo1FkdQF4dHyhGjzuA84uOqF8kbmSZcm+0br1SFvVApBRsIh7fQ42JmxtmKXFXcBXdb8b1AaQIPycxdmhT0hNQZgrHZPkrzm1bFwAap0wwYt7ACb4BXfcvheBjq9oghdM+Qj8B4wJmEDEKTttAAAAAElFTkSuQmCC';
-
 const PRIVATE_AGENT_ICON_BG = '1F1F1F';
 
 export enum LlmModelType {
@@ -187,7 +183,8 @@ export class TeamRole {
 
 export enum Role {
   TEAM_OWNER = "owner",
-  TEAM_MEMBER = "member"
+  TEAM_MEMBER = "member",
+  TEAM_EDITOR = "editor"
 }
 
 export class Agent {

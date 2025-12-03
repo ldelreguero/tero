@@ -18,6 +18,7 @@ if env.aws_access_key_id and env.aws_secret_access_key:
 if env.google_api_key:
     providers.append(GoogleProvider())
 
+
 def get_provider(model: str) -> AiModelProvider:
     for provider in providers:
         if provider.supports_model(model):

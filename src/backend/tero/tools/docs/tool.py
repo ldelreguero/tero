@@ -7,7 +7,7 @@ from uuid import UUID
 from enum import Enum
 import tiktoken
 
-from langchain.indexes import SQLRecordManager, aindex
+from langchain_classic.indexes import SQLRecordManager, aindex
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.callbacks.manager import AsyncCallbackManagerForRetrieverRun, AsyncCallbackManager
 from langchain_core.documents import Document

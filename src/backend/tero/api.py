@@ -43,12 +43,13 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 app.add_middleware(GZipMiddleware)
 if env.frontend_path:
     app.mount("/assets", StaticFiles(directory=os.path.join(env.frontend_path, "assets")), name="assets")
-
 setup_mcp_server(app)
+
 
 def _should_serve_frontend(path: str) -> bool:
     api_paths = ["/api", "/assets", "/mcp", "/.well-known/", "/resources/"]
     return not any(path.startswith(prefix) for prefix in api_paths) and path != "/manifest.json"
+
 
 @app.middleware("http")
 async def frontend_router(request: Request, call_next) -> Response:
@@ -83,6 +84,7 @@ class Manifest(CamelCaseModel):
     id: str
     contact_email: str
     auth: ManifestAuthConfig
+    disable_publish_global: bool
 
 
 @app.get("/manifest.json")
@@ -93,6 +95,7 @@ async def manifest() -> Manifest:
         auth=ManifestAuthConfig(
             url=env.frontend_openid_url or env.openid_url, client_id=env.openid_client_id, scope=env.openid_scope
         ),
+        disable_publish_global=env.disable_publish_global or False
     )
 
 

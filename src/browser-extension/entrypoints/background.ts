@@ -97,14 +97,16 @@ export default defineBackground(() => {
   const activateAgent = async (tabId: number, agent: Agent, url: string) => {
     const session = new AgentSession(tabId, agent, url);
     let success = true;
+    let errorStatus = undefined;
     try {
       await session.activate((msg) => sendToTab(tabId, msg));
       await saveAgentSession(session);
     } catch (e) {
       // exceptions from http methods are already logged so no need to handle them
       success = false;
+      errorStatus = (e as any)?.status;
     }
-    sendToTab(tabId, new AgentActivation(agent, success));
+    sendToTab(tabId, new AgentActivation(agent, success, errorStatus));
   };
 
   browser.webRequest.onBeforeRequest.addListener(

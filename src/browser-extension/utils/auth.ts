@@ -128,4 +128,13 @@ export class AuthService {
     await this.userManager.signinPopup()
   }
 
+  public async ensureAuthenticated(): Promise<User> {
+    const user = await this.getUser()
+    if (!user) {
+      await this.login()
+      return (await this.getUser())!
+    }
+    return user
+  }
+
 }

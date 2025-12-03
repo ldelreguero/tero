@@ -17,6 +17,7 @@ from ..files.domain import File, FileStatus, FileUpdate, FileMetadata, FileMetad
 from ..files.file_quota import QuotaExceededError
 from ..files.parser import add_encoding_to_content_type
 from ..files.repos import FileRepository
+from ..teams.domain import GLOBAL_TEAM_ID, Role
 from ..tools.core import AgentTool
 from ..tools.oauth import ToolOAuthRequest, build_tool_oauth_request_http_exception
 from ..tools.repos import ToolRepository
@@ -40,6 +41,7 @@ Use provided tools and information provided in context to answer user questions.
 Avoid generating responses that are not based on tools or previous context.
 Answer in the same language as the user.
 Use markdown to format your responses. You can include code blocks, tables, plantuml diagrams code blocks, echarts configuration code blocks and any standard markdown format"""
+
 
 class AgentSort(Enum):
     LAST_UPDATE = "LAST_UPDATE"
@@ -116,6 +118,13 @@ async def new_agent(user: Annotated[User, Depends(get_current_user)],
 async def update_agent(agent_id: int, updated: AgentUpdate, user: Annotated[User, Depends(get_current_user)],
         db: Annotated[AsyncSession, Depends(get_db)]) -> PublicAgent:
     agent = await find_editable_agent(agent_id, user, db)
+
+    if updated.team_id == GLOBAL_TEAM_ID and env.disable_publish_global and not any(tr.role in [Role.TEAM_OWNER, Role.TEAM_EDITOR] and tr.team_id == GLOBAL_TEAM_ID for tr in user.team_roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Global team members cannot publish to global team"
+        )
+    
     agent.update_with(updated)
     ret = await AgentRepository(db).update(agent)
     if updated.publish_prompts:

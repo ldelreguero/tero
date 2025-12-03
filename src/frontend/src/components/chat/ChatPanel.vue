@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, reactive, watch, computed } from 'vue';
 import { useI18n } from 'vue-i18n'
-import { ApiService, Agent, ThreadMessageOrigin, ThreadMessage, ThreadMessagePart, HttpError, findManifest } from '@/services/api';
+import { ApiService, Agent, ThreadMessageOrigin, ThreadMessage, ThreadMessagePart, HttpError, findManifest, TeamRoleStatus, Role } from '@/services/api';
 import { useChatStore } from '@/composables/useChatStore';
 import { useAgentStore } from '@/composables/useAgentStore';
 import { useBudgetStore } from '@/composables/useBudgetStore';
@@ -12,6 +12,7 @@ import ChatPanelHeader from './ChatPanelHeader.vue';
 import { AuthenticationWindowCloseError, AuthenticationCancelError, handleOAuthRequestsIn } from '@/services/toolOAuth';
 import { UserFeedback, AgentPrompt, UploadedFile, FileStatus } from '../../../../common/src/utils/domain';
 import ChatInput from '../../../../common/src/components/chat/ChatInput.vue';
+import { loadUserProfile } from '@/composables/useUserProfile';
 
 const props = defineProps({
   threadId: {
@@ -43,6 +44,7 @@ const chatInputRef = ref<InstanceType<typeof ChatInput>>()
 const attachedFiles = ref<UploadedFile[]>([]);
 const feedbackLoadingMessageId = ref<number | undefined>(undefined);
 const showPastChats = ref<boolean>(false);
+const shareablePrompts = ref(false)
 
 const chat = computed(() => chatsStore.currentChat);
 
@@ -53,7 +55,11 @@ const starterPrompts = computed(() =>
 onMounted(async () => {
   agentsPromptStore.prompts = [];
   await loadChatData(props.threadId);
-});
+  const user = await loadUserProfile()
+  if (user?.teams.some(t => t.status === TeamRoleStatus.ACCEPTED && t.role === Role.TEAM_OWNER)) {
+    shareablePrompts.value = true
+  }
+})
 
 const loadChatData = async (threadId: number) => {
   try {
@@ -440,7 +446,7 @@ const handleViewFile = (file: UploadedFile) => {
         }"
         :is-answering="streamingResponse"
         :enable-prompts="true"
-        :shareable-prompts="true"
+        :shareable-prompts="shareablePrompts"
         @send="onSendUserMessage"
         @files-change="handleFileChange"
         @stop="stopResponse">

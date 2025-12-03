@@ -16,7 +16,7 @@ class AzureModelDeployment(BaseModel):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(enable_decoding=False, extra='allow')
+    model_config = SettingsConfigDict(enable_decoding=False, extra="allow")
     
     db_url : str
     secret_encryption_key : SecretStr
@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     openid_client_id : str
     openid_scope : str
     allowed_users : list[str] = []
+    disable_publish_global : Optional[bool] = False
     contact_email : str
     azure_app_insights_connection : Optional[str] = None
     azure_endpoints : list[str]
