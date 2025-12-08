@@ -470,8 +470,8 @@ export class NewUser {
   role: Role;
 
   constructor(username: string, role: Role) {
-      this.username = username;
-      this.role = role;
+    this.username = username;
+    this.role = role;
   }
 }
 
@@ -984,12 +984,12 @@ export class ApiService {
   }
 
   async getImpactSummary(fromDate: Date, toDate: Date, teamId: number): Promise<ImpactSummary> {
-    const params = this.cleanSearchParams({from_date: fromDate, to_date: toDate, team_id: teamId})
+    const params = this.cleanSearchParams({ from_date: fromDate, to_date: toDate, team_id: teamId })
     return await this.fetchJson(`/impact/summary?${params}`)
   }
 
   async getImpactTopAgents(privateAgentsName: string, fromDate: Date, toDate: Date, teamId: number, search?: string, limit?: number, offset?: number, userId?: number): Promise<AgentImpactItem[]> {
-    const params = this.cleanSearchParams({from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, user_id: userId})
+    const params = this.cleanSearchParams({ from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, user_id: userId })
     const agents = await this.fetchJson(`/impact/agents?${params}`)
 
     return agents.map((agent: AgentImpactItem) => {
@@ -1007,17 +1007,17 @@ export class ApiService {
   }
 
   async getImpactTopUsers(fromDate: Date, toDate: Date, teamId: number, search?: string, limit?: number, offset?: number, agentId?: number, isExternalAgent?: boolean): Promise<UserImpactItem[]> {
-    const params = this.cleanSearchParams({from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, agent_id: agentId, is_external_agent: isExternalAgent})
+    const params = this.cleanSearchParams({ from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, agent_id: agentId, is_external_agent: isExternalAgent })
     return await this.fetchJson(`/impact/users?${params}`)
   }
 
   async getUsageSummary(fromDate: Date, toDate: Date, teamId: number): Promise<UsageSummary> {
-    const params = this.cleanSearchParams({from_date: fromDate, to_date: toDate, team_id: teamId})
+    const params = this.cleanSearchParams({ from_date: fromDate, to_date: toDate, team_id: teamId })
     return await this.fetchJson(`/usage/summary?${params}`)
   }
 
   async getUsageTopAgents(privateAgentsName: string, fromDate: Date, toDate: Date, teamId: number, search?: string, limit?: number, offset?: number, userId?: number): Promise<AgentUsageItem[]> {
-    const params = this.cleanSearchParams({from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, user_id: userId})
+    const params = this.cleanSearchParams({ from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, user_id: userId })
     const agents = await this.fetchJson(`/usage/agents?${params}`)
 
     return agents.map((agent: AgentUsageItem) => {
@@ -1035,7 +1035,7 @@ export class ApiService {
   }
 
   async getUsageTopUsers(fromDate: Date, toDate: Date, teamId: number, search?: string, limit?: number, offset?: number, agentId?: number): Promise<UserUsageItem[]> {
-    const params = this.cleanSearchParams({from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, agent_id: agentId})
+    const params = this.cleanSearchParams({ from_date: fromDate, to_date: toDate, team_id: teamId, search: search, limit: limit, offset: offset, agent_id: agentId })
     return await this.fetchJson(`/usage/users?${params}`)
   }
 
@@ -1109,7 +1109,7 @@ export class ApiService {
     }
   }
 
-  private async *fetchSSEStream<T=any>(resp: Response, url: string): AsyncIterable<SSEPayload<T>> {
+  private async *fetchSSEStream<T = any>(resp: Response, url: string): AsyncIterable<SSEPayload<T>> {
     const reader = resp.body!.getReader()
     let done = false
 
@@ -1213,7 +1213,7 @@ export class ApiService {
   }
 }
 
-export class ThreadMessagePart{
+export class ThreadMessagePart {
   userMessage?: { id: number, files: UploadedFile[] }
   answerText?: string
   metadata?: {

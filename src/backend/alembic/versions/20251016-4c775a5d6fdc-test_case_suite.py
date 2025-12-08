@@ -43,9 +43,13 @@ def upgrade() -> None:
     op.execute("UPDATE test_case_result SET id = nextval('test_case_result_id_seq')")
     op.execute("ALTER TABLE test_case_result ALTER COLUMN id SET DEFAULT nextval('test_case_result_id_seq')")
     op.execute("ALTER SEQUENCE test_case_result_id_seq OWNED BY test_case_result.id")
-    op.alter_column('test_case_result', 'id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('test_case_result', 'id',
+                    existing_type=sa.INTEGER(),
+                    nullable=False)
     op.create_primary_key('test_case_result_pkey', 'test_case_result', ['id'])
-    op.alter_column('test_case_result', 'thread_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('test_case_result', 'thread_id',
+                    existing_type=sa.INTEGER(),
+                    nullable=True)
     op.add_column('test_case_result', sa.Column('test_suite_run_id', sa.Integer(), nullable=True))
     op.create_foreign_key('fk_test_case_result_test_suite_run_id', 'test_case_result', 'test_suite_run',
                           ['test_suite_run_id'], ['id'])
@@ -70,7 +74,9 @@ def downgrade() -> None:
     op.drop_column('test_case_result', 'test_suite_run_id')
     op.drop_constraint('test_case_result_pkey', 'test_case_result', type_='primary')
     op.drop_column('test_case_result', 'id')
-    op.alter_column('test_case_result', 'thread_id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('test_case_result', 'thread_id',
+                    existing_type=sa.INTEGER(),
+                    nullable=False)
     op.create_primary_key('test_case_result_pkey', 'test_case_result', ['thread_id'])
     op.drop_index('ix_test_suite_run_agent_id_executed_at', table_name='test_suite_run')
     op.drop_table('test_suite_run')

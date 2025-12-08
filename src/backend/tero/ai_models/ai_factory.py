@@ -36,5 +36,3 @@ def build_chat_model(model: str, temperature: Optional[float]=None, reasoning_ef
 
 def build_streaming_chat_model(model: str, temperature: Optional[float]=None, reasoning_effort: Optional[str]=None) -> Any:
     return get_provider(model).build_streaming_chat_model(model, temperature, reasoning_effort)
-
-    
