@@ -358,11 +358,11 @@ const onSelectExecution = (execution: TestSuiteRun) => {
             :items="[
               {
                 label: t('exportAgent'),
-                tablerIcon: IconDownload,
+                tablerIcon: IconUpload,
                 command: () => exportAgent()
               }, {
                 label: t('importAgent'),
-                tablerIcon: IconUpload,
+                tablerIcon: IconDownload,
                 command: () => showImportAgent = true
               }]"/>
         </div>
