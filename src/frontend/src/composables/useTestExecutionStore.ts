@@ -7,7 +7,7 @@ export interface TestCaseExecutionState {
     userMessage?: { id: number; text: string };
     agentMessage?: { id: number; text: string, complete: boolean };
     status?: TestCaseResultStatus;
-    statusUpdates?: Object[];
+    statusUpdates?: any[];
 }
 
 const testExecutionStore = reactive({

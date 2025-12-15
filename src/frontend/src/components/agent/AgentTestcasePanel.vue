@@ -10,7 +10,6 @@ import { AnimationEffect } from '../../../../common/src/utils/animations';
 import { useTestExecutionStore } from '@/composables/useTestExecutionStore';
 import { useTestCaseStore } from '@/composables/useTestCaseStore';
 import { IconArrowLeft, IconPencil, IconLoader2 } from '@tabler/icons-vue';
-import { type StatusUpdate } from '../../../../common/src/components/chat/ChatMessage.vue';
 
 const api = new ApiService()
 const { t } = useI18n()
@@ -212,7 +211,7 @@ watch(executionState, (newState) => {
 
 
         if (newState.statusUpdates && newState.statusUpdates.length > 0) {
-            agentMsg.statusUpdates = newState.statusUpdates.map((su: StatusUpdate) => ({
+            agentMsg.statusUpdates = newState.statusUpdates.map((su: any) => ({
                 action: su.action,
                 toolName: su.toolName,
                 description: su.description,

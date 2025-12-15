@@ -261,9 +261,9 @@ export class AgentTool {
 
 export class AgentToolConfig {
   toolId: string
-  config: Record<string, Object>
+  config: any
 
-  constructor(toolId: string, config: Record<string, Object>) {
+  constructor(toolId: string, config: any) {
     this.toolId = toolId
     this.config = config
   }
@@ -600,16 +600,16 @@ export enum TestCaseResultStatus {
 export type TestSuiteExecutionStreamEvent =
   | { type: 'suite.test.start'; data: { testCaseId: number; resultId: number } }
   | { type: 'suite.test.metadata'; data: { testCaseId: number; resultId: number } }
-  | { type: 'suite.test.phase'; data: { phase: string; status?: string; evaluation?: Object } }
+  | { type: 'suite.test.phase'; data: { phase: string; status?: string; evaluation?: any } }
   | { type: 'suite.test.userMessage'; data: { id: number; text: string } }
   | { type: 'suite.test.agentMessage.start'; data: { id: number } }
   | { type: 'suite.test.agentMessage.chunk'; data: { id: number; chunk: string } }
   | { type: 'suite.test.agentMessage.complete'; data: { id: number; text: string } }
-  | { type: 'suite.test.executionStatus'; data: Object }
+  | { type: 'suite.test.executionStatus'; data: any }
   | { type: 'suite.test.error'; data: { message: string } }
-  | { type: 'suite.test.complete'; data: { testCaseId: number; resultId: number; status: string; evaluation?: Object } }
+  | { type: 'suite.test.complete'; data: { testCaseId: number; resultId: number; status: string; evaluation?: any } }
   | { type: 'suite.complete'; data: { suiteRunId: number; status: string; totalTests: number; passed: number; failed: number; errors: number; skipped: number } }
-  | { type: 'suite.error'; data: Object }
+  | { type: 'suite.error'; data: {} }
 
 export class TestCaseNewThreadMessage {
   text: string
