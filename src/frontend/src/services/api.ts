@@ -261,9 +261,9 @@ export class AgentTool {
 
 export class AgentToolConfig {
   toolId: string
-  config: any
+  config: Record<string, any>
 
-  constructor(toolId: string, config: any) {
+  constructor(toolId: string, config: Record<string, any>) {
     this.toolId = toolId
     this.config = config
   }
