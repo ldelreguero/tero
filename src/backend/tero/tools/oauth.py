@@ -65,13 +65,13 @@ class ToolOAuthClientInfo(SQLModel, table=True):
     agent_id: int = Field(primary_key=True)
     tool_id: str = Field(primary_key=True)
     client_id: str
-    client_secret: str = EncryptedField()
+    client_secret: Optional[str] = EncryptedField()
     scope: Optional[str] = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
 
 class ToolOAuthRequest(BaseException):
-    
+
     def __init__(self, auth_url: str, state: str):
         self.auth_url = auth_url
         self.state = state
@@ -82,7 +82,6 @@ def build_tool_oauth_request_http_exception(e: ToolOAuthRequest) -> HTTPExceptio
 
 
 class ToolAuthCallback(BaseModel):
-    state: str
     code: Optional[str] = None
 
 
@@ -118,7 +117,7 @@ class ToolOAuthRepository:
             where(ToolOAuthState.user_id == user_id, ToolOAuthState.tool_id == tool_id, ToolOAuthState.state == state))
         ret = await self._db.exec(stmt)
         return ret.one_or_none()
-    
+
     async def save_state(self, state: ToolOAuthState):
         state.updated_at = datetime.now(timezone.utc)
         await self._db.merge(state)
@@ -134,18 +133,18 @@ class ToolOAuthRepository:
         token_cutoff = datetime.now(timezone.utc) - timedelta(minutes=env.tool_oauth_token_ttl_minutes)
         token_stmt = scalar(delete(ToolOAuthToken).where(and_(ToolOAuthToken.updated_at < token_cutoff)))
         await self._db.exec(token_stmt)
-        
+
         state_cutoff = datetime.now(timezone.utc) - timedelta(minutes=env.tool_oauth_state_ttl_minutes)
         state_stmt = scalar(delete(ToolOAuthState).where(and_(ToolOAuthState.updated_at < state_cutoff)))
         await self._db.exec(state_stmt)
-        
+
         await self._db.commit()
 
 
 class ToolOAuthClientInfoRepository:
     def __init__(self, db: AsyncSession):
         self._db = db
-    
+
     async def save(self, info: ToolOAuthClientInfo):
         await self._db.merge(info)
         await self._db.commit()
@@ -155,7 +154,7 @@ class ToolOAuthClientInfoRepository:
             where(ToolOAuthClientInfo.agent_id == agent_id, ToolOAuthClientInfo.tool_id == tool_id))
         result = await self._db.exec(stmt)
         return result.one_or_none()
-    
+
     async def delete(self, agent_id: int, tool_id: str):
         stmt = scalar(delete(ToolOAuthClientInfo).
             where(and_(ToolOAuthClientInfo.agent_id == agent_id, ToolOAuthClientInfo.tool_id == tool_id)))
@@ -169,8 +168,8 @@ class ToolOAuthClientInfoRepository:
         stmt = scalar(
             delete(ToolOAuthClientInfo)
             .where(and_(
-                ToolOAuthClientInfo.tool_id == tool_id if len(tool_id_parts) == 1 else col(ToolOAuthClientInfo.tool_id).like(f"{tool_id_parts[0]}-%"), 
-                ToolOAuthClientInfo.updated_at < cutoff, 
+                ToolOAuthClientInfo.tool_id == tool_id if len(tool_id_parts) == 1 else col(ToolOAuthClientInfo.tool_id).like(f"{tool_id_parts[0]}-%"),
+                ToolOAuthClientInfo.updated_at < cutoff,
                 ToolOAuthClientInfo.client_id != "")))
         await self._db.exec(stmt)
         await self._db.commit()
@@ -200,7 +199,7 @@ class AgentToolOAuthStorage(TokenStorage):
 
     async def set_tokens(self, tokens: OAuthToken):
         await self._oauth_repo.save_token(ToolOAuthToken(
-            user_id=self._user_id, 
+            user_id=self._user_id,
             agent_id=self._agent_id,
             tool_id=self._tool_id,
             access_token=tokens.access_token,
@@ -251,26 +250,26 @@ class AgentToolOauth(OAuthClientProvider):
         client_metadata = OAuthClientMetadata(redirect_uris=[AnyHttpUrl(_build_redirect_uri(tool_id))], scope=scope)
         super().__init__(
             server_url,
-            client_metadata, 
-            AgentToolOAuthStorage(user_id, agent_id, tool_id, db, self), 
-            redirect_handler=self._redirect_handler, 
+            client_metadata,
+            AgentToolOAuthStorage(user_id, agent_id, tool_id, db, self),
+            redirect_handler=self._redirect_handler,
             callback_handler=self._callback_handler
         )
         self.context.oauth_metadata = metadata
         self.state = ""
         self.code_verifier = ""
-    
+
     @property
     def server_url(self) -> str:
         return self.context.server_url
 
-    # custom redirect handler that saves the state (to restore it in OAuth callback) and requests OAuth authentication flow       
+    # custom redirect handler that saves the state (to restore it in OAuth callback) and requests OAuth authentication flow
     async def _redirect_handler(self, auth_url: str):
         tool_state = ToolOAuthState(
-            user_id=self._user_id, 
+            user_id=self._user_id,
             agent_id=self._agent_id,
-            tool_id=self._tool_id, 
-            state=self.state, 
+            tool_id=self._tool_id,
+            state=self.state,
             code_verifier=self.code_verifier,
             token_endpoint=self.context.oauth_metadata.token_endpoint.unicode_string() if self.context.oauth_metadata else None)
         await self._oauth_repo.save_state(tool_state)
@@ -279,23 +278,23 @@ class AgentToolOauth(OAuthClientProvider):
     # this is just to satisfy the callback_handler. It should never be called due to the redirect_handler
     async def _callback_handler(self) -> tuple[str, str | None]:
         return "", None
-    
+
     # part of this logic is the same as async_auth_flow but instead of adding header to a request and doing the complete OAuth flow,
     # a ToolOAuthRequest is raised when needed
     async def solve_tokens(self) -> Optional[OAuthToken]:
         async with self.context.lock:
             if not self._initialized:
                 await self._initialize()
-            
+
             # if client_id is empty then it means that the client doesn't support authentication
             if not self.context.client_info or self.context.client_info.client_id:
                 try:
                     await self.ensure_token()
                 except UnsupportedClientRegistrationException:
                     return None
-            
+
             return self.context.current_tokens
-    
+
     # override this method to add a 1 minute buffer to the token expiry time to avoid 401 errors
     def is_token_valid(self) -> bool:
         if not self.context.current_tokens or not self.context.current_tokens.access_token:
@@ -303,13 +302,13 @@ class AgentToolOauth(OAuthClientProvider):
 
         if self.context.token_expiry_time and self.context.token_expiry_time < time.time() + 60:
             return False
-        
+
         return True
 
     async def ensure_token(self) -> None:
         if self.is_token_valid():
             return
-        
+
         if self.context.can_refresh_token():
             refresh_request = await self._refresh_token()
             refresh_response = await self._http_request(refresh_request)
@@ -354,7 +353,7 @@ class AgentToolOauth(OAuthClientProvider):
         for url in prm_discovery_urls:
             discovery_request = create_oauth_metadata_request(url)
             discovery_response = await self._http_request(discovery_request)
-            
+
             prm = await handle_protected_resource_response(discovery_response)
             if prm:
                 self.context.protected_resource_metadata = prm
@@ -362,7 +361,7 @@ class AgentToolOauth(OAuthClientProvider):
                 break
             else:
                 logger.debug(f"Protected resource metadata discovery failed: {url}")
-        
+
         asm_discovery_urls = build_oauth_authorization_server_metadata_discovery_urls(
             self.context.auth_server_url, self.context.server_url
         )
@@ -370,7 +369,7 @@ class AgentToolOauth(OAuthClientProvider):
         for url in asm_discovery_urls:
             oauth_metadata_request = create_oauth_metadata_request(url)
             oauth_metadata_response = await self._http_request(oauth_metadata_request)
-            
+
             ok, asm = await handle_auth_metadata_response(oauth_metadata_response)
             if not ok:
                 break

@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from ...core.repos import attr, scalar
 from ...threads.domain import Thread, ThreadMessage
 from ...threads.repos import ThreadRepository
-from .domain import TestCase, TestCaseResult, TestSuiteRun
+from .domain import TestCase, TestCaseResult, TestSuiteRun, TestSuiteRunEvent, TestSuiteEventType
 
 
 class TestCaseRepository:
@@ -144,7 +144,7 @@ class TestSuiteRunRepository:
         result_stmt = select(TestCaseResult).where(TestCaseResult.test_suite_run_id == suite_run.id)
         result = await self._db.exec(result_stmt)
         test_case_results = list(result.all())
-        
+
         thread_repo = ThreadRepository(self._db)
         for test_case_result in test_case_results:
             if test_case_result.thread_id:
@@ -152,11 +152,60 @@ class TestSuiteRunRepository:
                 execution_thread_result = await self._db.exec(execution_thread_stmt)
                 execution_thread = cast(Thread, execution_thread_result.one_or_none())
                 await thread_repo.delete(execution_thread)
-        
+
         delete_results_stmt = scalar(delete(TestCaseResult).where(and_(TestCaseResult.test_suite_run_id == suite_run.id)))
         await self._db.exec(delete_results_stmt)
-        
+
         delete_suite_run_stmt = scalar(delete(TestSuiteRun).where(and_(TestSuiteRun.id == suite_run.id)))
         await self._db.exec(delete_suite_run_stmt)
-        
+
+        await self._db.commit()
+
+
+class TestSuiteRunEventRepository:
+    def __init__(self, db: AsyncSession):
+        self._db = db
+
+    async def add(self, event: TestSuiteRunEvent) -> TestSuiteRunEvent:
+        self._db.add(event)
+        await self._db.commit()
+        await self._db.refresh(event)
+        return event
+
+    async def find_by_suite_run(self, suite_run_id: int, after_id: Optional[int] = None) -> List[TestSuiteRunEvent]:
+        stmt = (
+            select(TestSuiteRunEvent)
+            .where(TestSuiteRunEvent.test_suite_run_id == suite_run_id)
+        )
+        if after_id:
+            stmt = stmt.where(TestSuiteRunEvent.id > after_id)
+
+        stmt = stmt.order_by(col(TestSuiteRunEvent.id).asc())
+        ret = await self._db.exec(stmt)
+        return list(ret.all())
+
+    async def find_current_test_events(self, suite_run_id: int) -> List[TestSuiteRunEvent]:
+        subq = (
+            select(func.max(TestSuiteRunEvent.id))
+            .where(TestSuiteRunEvent.test_suite_run_id == suite_run_id)
+            .where(TestSuiteRunEvent.type == TestSuiteEventType.TEST_START.value)
+        )
+        last_start_id_result = await self._db.exec(subq)
+        last_start_id = last_start_id_result.one_or_none()
+
+        if not last_start_id:
+            return []
+
+        stmt = (
+            select(TestSuiteRunEvent)
+            .where(TestSuiteRunEvent.test_suite_run_id == suite_run_id)
+            .where(TestSuiteRunEvent.id >= last_start_id)
+            .order_by(col(TestSuiteRunEvent.id).asc())
+        )
+        ret = await self._db.exec(stmt)
+        return list(ret.all())
+
+    async def delete_by_suite_run_id(self, suite_run_id: int) -> None:
+        stmt = scalar(delete(TestSuiteRunEvent).where(and_(TestSuiteRunEvent.test_suite_run_id == suite_run_id)))
+        await self._db.exec(stmt)
         await self._db.commit()

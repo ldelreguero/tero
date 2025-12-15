@@ -10,6 +10,7 @@ import { AnimationEffect } from '../../../../common/src/utils/animations';
 import { useTestExecutionStore } from '@/composables/useTestExecutionStore';
 import { useTestCaseStore } from '@/composables/useTestCaseStore';
 import { IconArrowLeft, IconPencil, IconLoader2 } from '@tabler/icons-vue';
+import { type StatusUpdate } from '../../../../common/src/components/chat/ChatMessage.vue';
 
 const api = new ApiService()
 const { t } = useI18n()
@@ -62,7 +63,7 @@ onMounted(async () => {
                 new AgentTestcaseChatUiMessage(t('userMessagePlaceholder'), true, true),
                 new AgentTestcaseChatUiMessage(t('agentMessagePlaceholder'), false, true),
             ]
-            await selectLastMessageOrPlaceholder()
+            await selectNextMessageOrPlaceholder()
         }
     } finally {
         isLoading.value = false
@@ -78,7 +79,7 @@ const loadTestCaseData = async () => {
             } catch (error) {
                 handleError(error)
             }
-            await selectLastMessageOrPlaceholder()
+            await selectNextMessageOrPlaceholder()
         } else {
             try {
                 if (testCaseResult.value?.testSuiteRunId && testCaseResult.value?.id) {
@@ -107,40 +108,33 @@ const loadTestCaseData = async () => {
 }
 
 const mapMessagesToAgentTestcaseChatUi = (msgs: ThreadMessage[], usePlaceholders: boolean = true): AgentTestcaseChatUiMessage[] => {
-    const createMessage = (message: ThreadMessage | undefined, isUser: boolean) => {
-        if (message) {
-            const placeholderText = isUser ? t('userMessagePlaceholder') : t('agentMessagePlaceholder')
-            const text = message.text && message.text.length > 0
-                ? message.text
-                : (usePlaceholders ? placeholderText : '')
+    const result: AgentTestcaseChatUiMessage[] = msgs.map((msg, index) => {
+        const isUser = index % 2 === 0
+        const placeholderText = isUser ? t('userMessagePlaceholder') : t('agentMessagePlaceholder')
+        const text = msg.text || (usePlaceholders ? placeholderText : '')
 
-            return new AgentTestcaseChatUiMessage(
-                text,
-                isUser,
-                usePlaceholders && !message.text,
-                message.id,
-                message.statusUpdates
-            )
+        return new AgentTestcaseChatUiMessage(
+            text,
+            isUser,
+            usePlaceholders && !msg.text,
+            msg.id,
+            msg.statusUpdates
+        )
+    })
+
+    if (usePlaceholders) {
+        if (result.length === 0) {
+            result.push(new AgentTestcaseChatUiMessage(t('userMessagePlaceholder'), true, true))
+            result.push(new AgentTestcaseChatUiMessage(t('agentMessagePlaceholder'), false, true))
+        } else if (result[result.length - 1].isUser) {
+            result.push(new AgentTestcaseChatUiMessage(t('agentMessagePlaceholder'), false, true))
+        } else if (!result[result.length - 1].isPlaceholder) {
+            result.push(new AgentTestcaseChatUiMessage(t('userMessagePlaceholder'), true, true))
+            result.push(new AgentTestcaseChatUiMessage(t('agentMessagePlaceholder'), false, true))
         }
-
-        if (usePlaceholders) {
-            return new AgentTestcaseChatUiMessage(
-                isUser ? t('userMessagePlaceholder') : t('agentMessagePlaceholder'),
-                isUser,
-                true
-            )
-        }
-
-        return undefined
     }
 
-    const userMessage = createMessage(msgs[0], true)
-    const agentMessage = createMessage(msgs[1], false)
-
-    return [
-        ...(userMessage ? [userMessage] : []),
-        ...(agentMessage ? [agentMessage] : [])
-    ]
+    return result
 }
 
 const handleSelectMessage = async (message: AgentTestcaseChatUiMessage) => {
@@ -151,16 +145,16 @@ const handleSelectMessage = async (message: AgentTestcaseChatUiMessage) => {
 }
 
 const handleSelectTestCase = async (newTestCase: TestCase | undefined) => {
+    selectedMessage.value = undefined
     if (newTestCase) {
         if(!isRunning.value) await loadTestCaseData()
-        if(props.isEditing) await selectLastMessageOrPlaceholder()
     } else if (props.isNewTestCase) {
         inputText.value = ''
         messages.value = [
             new AgentTestcaseChatUiMessage(t('userMessagePlaceholder'), true, true),
             new AgentTestcaseChatUiMessage(t('agentMessagePlaceholder'), false, true),
         ]
-        await selectLastMessageOrPlaceholder()
+        await selectNextMessageOrPlaceholder()
     }
 }
 
@@ -170,7 +164,7 @@ watch(() => testCase.value, async (newVal, oldVal) => {
     }
 })
 
-watch(() => testCaseResult.value, async (newVal) => {
+watch(() => testCaseResult.value, async () => {
     loadTestCaseData()
 })
 
@@ -178,36 +172,30 @@ watch([() => props.isEditing, () => props.isNewTestCase], async () => {
     await handleSelectTestCase(testCase.value)
 })
 
-watch(executionState, (newState, oldState) => {
+watch(executionState, (newState) => {
     if (!newState) {
         return
     }
 
-    if (newState.phase === 'executing') {
-        messages.value = []
-    }
-
     if (newState.userMessage) {
-        let userMsg = messages.value.find(m => m.isUser)
-        if (!userMsg) {
-            userMsg = new AgentTestcaseChatUiMessage(
-                newState.userMessage.text,
+        const userMessage = newState.userMessage
+        const existingUserMsg = messages.value.find((m: AgentTestcaseChatUiMessage) => m.isUser && m.id === userMessage.id)
+        if (!existingUserMsg) {
+            messages.value.push(new AgentTestcaseChatUiMessage(
+                userMessage.text || '',
                 true,
                 false,
-                newState.userMessage.id
-            )
-            messages.value.push(userMsg)
-        } else {
-            userMsg.text = newState.userMessage.text
-            userMsg.id = newState.userMessage.id
+                userMessage.id
+            ))
         }
     }
 
-    if (newState.agentChunks || newState.agentMessage) {
-        const agentText = newState.agentChunks || newState.agentMessage?.text || ''
-        let agentMsg = messages.value.find(m => !m.isUser)
+    if (newState.agentMessage) {
+        const agentText = newState.agentMessage.text || ''
 
-        if (!agentMsg) {
+        let agentMsg = messages.value.slice().reverse().find((m: AgentTestcaseChatUiMessage) => !m.isUser)
+
+        if (!agentMsg || agentMsg.id !== newState.agentMessage.id) {
             agentMsg = new AgentTestcaseChatUiMessage(
                 agentText,
                 false,
@@ -217,13 +205,14 @@ watch(executionState, (newState, oldState) => {
             messages.value.push(agentMsg)
         } else {
             agentMsg.text = agentText
-            agentMsg.id = newState.agentMessage?.id
         }
 
-        agentMsg.isStreaming = newState.phase === 'executing'
+        agentMsg.id = newState.agentMessage.id
+        agentMsg.isStreaming = newState.phase === 'executing' && !newState.agentMessage?.complete
+
 
         if (newState.statusUpdates && newState.statusUpdates.length > 0) {
-            agentMsg.statusUpdates = newState.statusUpdates.map((su: any) => ({
+            agentMsg.statusUpdates = newState.statusUpdates.map((su: StatusUpdate) => ({
                 action: su.action,
                 toolName: su.toolName,
                 description: su.description,
@@ -234,7 +223,7 @@ watch(executionState, (newState, oldState) => {
             }))
         }
 
-        if (newState.phase === 'completed') {
+        if (newState.agentMessage?.complete === true) {
             agentMsg.completeStatus()
             agentMsg.isStreaming = false
         }
@@ -244,43 +233,78 @@ watch(executionState, (newState, oldState) => {
 const onMessageSend = async () => {
     if (!selectedMessage.value) return
 
-    selectedMessage.value.text = inputText.value
+    const message = selectedMessage.value
+    message.text = inputText.value
+    message.isPlaceholder = false
     inputText.value = ''
     let currentTestCase = testCase.value;
     if (!currentTestCase) {
         currentTestCase = await addTestCase(props.agentId)
         setSelectedTestCase(currentTestCase)
     }
-    let message = selectedMessage.value
-    let updatedMessage: ThreadMessage;
-    message.isPlaceholder = false
-    if(getLastPlaceholder()) await selectLastMessageOrPlaceholder()
-    else selectedMessage.value = undefined
-    try{
-        if (message.id) {
-            updatedMessage = await api.updateTestCaseMessage(props.agentId, currentTestCase.thread.id, message.id, new TestCaseThreadMessageUpdate(message.text))
-        } else {
-            updatedMessage = await api.addTestCaseMessage(props.agentId, currentTestCase.thread.id,
-                new TestCaseNewThreadMessage(message.text, message.isUser ? ThreadMessageOrigin.USER : ThreadMessageOrigin.AGENT)
-            )
-        }
-        message.id = updatedMessage.id
+    saveMessageAsync(message, currentTestCase)
 
-        const hasUserMessage = messages.value.some((m) => m.isUser && m.text && m.text.trim().length > 0)
-        const hasAgentMessage = messages.value.some((m) => !m.isUser && m.text && m.text.trim().length > 0)
-        if (currentTestCase && currentTestCase.thread.id && hasUserMessage && hasAgentMessage) {
-            await refreshTestCase(props.agentId, currentTestCase.thread.id)
-        }
-    } catch (error) {
-        handleError(error)
+    const allMessagesSaved = messages.value.every(m => !m.isPlaceholder)
+    if (allMessagesSaved) {
+        const newUserPlaceholder = new AgentTestcaseChatUiMessage(
+            t('userMessagePlaceholder'),
+            true,
+            true
+        )
+        const newAgentPlaceholder = new AgentTestcaseChatUiMessage(
+            t('agentMessagePlaceholder'),
+            false,
+            true
+        )
+        messages.value.push(newUserPlaceholder)
+        messages.value.push(newAgentPlaceholder)
+
+        selectedMessage.value = newUserPlaceholder
+        inputText.value = ''
+        await nextTick()
+        chatInputRef.value?.focus()
+        return
     }
+
+    if(getLastPlaceholder()) await selectNextMessageOrPlaceholder()
+    else selectedMessage.value = undefined
 }
 
-const selectLastMessageOrPlaceholder = async () => {
-    selectedMessage.value = getLastPlaceholder() || messages.value[messages.value.length - 1]
+const saveMessageAsync = (message: AgentTestcaseChatUiMessage, currentTestCase: TestCase) => {
+    const apiCall = message.id
+        ? api.updateTestCaseMessage(props.agentId, currentTestCase.thread.id, message.id, new TestCaseThreadMessageUpdate(message.text))
+        : api.addTestCaseMessage(props.agentId, currentTestCase.thread.id,
+            new TestCaseNewThreadMessage(message.text, message.isUser ? ThreadMessageOrigin.USER : ThreadMessageOrigin.AGENT))
+
+    apiCall
+        .then(async (updatedMessage: ThreadMessage) => {
+            message.id = updatedMessage.id
+
+            const firstUserMessage = messages.value[0]
+            const firstAgentMessage = messages.value[1]
+            const hasFirstUserMessage = firstUserMessage?.isUser && firstUserMessage?.text?.trim().length > 0 && !firstUserMessage.isPlaceholder
+            const hasFirstAgentMessage = firstAgentMessage && !firstAgentMessage.isUser && firstAgentMessage?.text?.trim().length > 0 && !firstAgentMessage.isPlaceholder
+            if (currentTestCase && currentTestCase.thread.id && hasFirstUserMessage && hasFirstAgentMessage) {
+                await refreshTestCase(props.agentId, currentTestCase.thread.id)
+            }
+        })
+        .catch((error: unknown) => {
+            handleError(error)
+        })
+}
+
+const selectNextMessageOrPlaceholder = async () => {
+    if (selectedMessage.value) {
+        const currentIndex = messages.value.findIndex(m => m.uuid === selectedMessage.value?.uuid)
+        if (currentIndex !== -1 && currentIndex < messages.value.length - 1) {
+            selectedMessage.value = messages.value[currentIndex + 1]
+        }
+    } else {
+        selectedMessage.value = getLastPlaceholder()
+    }
+    await nextTick()
     inputText.value = selectedMessage.value?.isPlaceholder ? '' : selectedMessage.value?.text || ''
     if (selectedMessage.value) {
-        await nextTick()
         chatInputRef.value?.focus()
     }
 }

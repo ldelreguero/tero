@@ -261,9 +261,9 @@ export class AgentTool {
 
 export class AgentToolConfig {
   toolId: string
-  config: Record<string, any>
+  config: Record<string, Object>
 
-  constructor(toolId: string, config: Record<string, any>) {
+  constructor(toolId: string, config: Record<string, Object>) {
     this.toolId = toolId
     this.config = config
   }
@@ -598,19 +598,18 @@ export enum TestCaseResultStatus {
 }
 
 export type TestSuiteExecutionStreamEvent =
-  | { type: 'suite.start'; data: { suiteRunId: number } }
   | { type: 'suite.test.start'; data: { testCaseId: number; resultId: number } }
   | { type: 'suite.test.metadata'; data: { testCaseId: number; resultId: number } }
-  | { type: 'suite.test.phase'; data: { phase: string; status?: string; evaluation?: any } }
+  | { type: 'suite.test.phase'; data: { phase: string; status?: string; evaluation?: Object } }
   | { type: 'suite.test.userMessage'; data: { id: number; text: string } }
   | { type: 'suite.test.agentMessage.start'; data: { id: number } }
   | { type: 'suite.test.agentMessage.chunk'; data: { id: number; chunk: string } }
   | { type: 'suite.test.agentMessage.complete'; data: { id: number; text: string } }
-  | { type: 'suite.test.executionStatus'; data: any }
+  | { type: 'suite.test.executionStatus'; data: Object }
   | { type: 'suite.test.error'; data: { message: string } }
-  | { type: 'suite.test.complete'; data: { testCaseId: number; resultId: number; status: string; evaluation?: any } }
+  | { type: 'suite.test.complete'; data: { testCaseId: number; resultId: number; status: string; evaluation?: Object } }
   | { type: 'suite.complete'; data: { suiteRunId: number; status: string; totalTests: number; passed: number; failed: number; errors: number; skipped: number } }
-  | { type: 'suite.error'; data: {} }
+  | { type: 'suite.error'; data: Object }
 
 export class TestCaseNewThreadMessage {
   text: string
@@ -899,10 +898,15 @@ export class ApiService {
     return await this.fetchJson(`/agents/${agentId}/tests/${testCaseId}/messages/${messageId}`, 'PUT', message)
   }
 
-  async *runTestSuiteStream(agentId: number, testCaseIds?: number[]): AsyncIterable<TestSuiteExecutionStreamEvent> {
-    const url = `/agents/${agentId}/tests/runs`;
+  async runTestSuite(agentId: number, testCaseIds?: number[]): Promise<TestSuiteRun> {
     const requestBody = testCaseIds ? { test_case_ids: testCaseIds } : {};
-    const resp = await this.fetch(url, 'POST', requestBody);
+    const suiteRun = await this.fetchJson(`/agents/${agentId}/tests/runs`, 'POST', requestBody);
+    return this.parseTestSuiteRunDates(suiteRun);
+  }
+
+  async *streamTestSuiteUpdates(agentId: number, suiteRunId: number): AsyncIterable<TestSuiteExecutionStreamEvent> {
+    const url = `/agents/${agentId}/tests/runs/${suiteRunId}/stream`;
+    const resp = await this.fetch(url, 'GET');
 
     const contentType = resp.headers.get('content-type')
     if (contentType?.startsWith('text/event-stream')) {
@@ -920,10 +924,10 @@ export class ApiService {
   async findTestSuiteRuns(agentId: number, limit: number = 20, offset: number = 0): Promise<TestSuiteRun[]> {
     const searchParams = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() });
     const suiteRuns = await this.fetchJson(`/agents/${agentId}/tests/runs?${searchParams.toString()}`)
-    return suiteRuns.map((suiteRun: any) => this.parseTestSuiteRunDates(suiteRun))
+    return suiteRuns.map((suiteRun: TestSuiteRun) => this.parseTestSuiteRunDates(suiteRun))
   }
 
-  private parseTestSuiteRunDates(suiteRun: any): TestSuiteRun {
+  private parseTestSuiteRunDates(suiteRun: TestSuiteRun): TestSuiteRun {
     return {
       ...suiteRun,
       executedAt: moment.utc(suiteRun.executedAt).toDate(),
@@ -1142,8 +1146,12 @@ export class ApiService {
     return data.transcription
   }
 
-  async toolAuth(toolId: string, code: string, state: string): Promise<void> {
-    await this.post(`/tools/${toolId}/oauth-callback`, { code, state })
+  async completeToolAuth(toolId: string, state: string, code: string): Promise<void> {
+    await this.put(`/tools/${toolId}/oauth/${state}`, { code })
+  }
+
+  async deleteToolAuth(toolId: string, state: string): Promise<void> {
+    await this.delete(`/tools/${toolId}/oauth/${state}`)
   }
 
   async findBudgetUsage(): Promise<BudgetUsage> {

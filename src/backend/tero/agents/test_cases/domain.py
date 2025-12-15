@@ -38,6 +38,7 @@ class TestSuiteRunStatus(Enum):
     RUNNING = "RUNNING"
     SUCCESS = "SUCCESS"
     FAILURE = "FAILURE"
+    CANCELLING = "CANCELLING"
 
 
 class TestCaseEventType(Enum):
@@ -52,7 +53,6 @@ class TestCaseEventType(Enum):
 
 
 class TestSuiteEventType(Enum):
-    START = "suite.start"
     TEST_START = "suite.test.start"
     TEST_COMPLETE = "suite.test.complete"
     COMPLETE = "suite.complete"
@@ -74,6 +74,18 @@ class TestSuiteRun(CamelCaseModel, table=True):
     failed_tests: int = Field(default=0)
     error_tests: int = Field(default=0)
     skipped_tests: int = Field(default=0)
+
+
+class TestSuiteRunEvent(CamelCaseModel, table=True):
+    __tablename__ : Any = "test_suite_run_event"
+    __table_args__ = (
+        Index('ix_test_suite_run_event_test_suite_run_id_created_at', 'test_suite_run_id', 'created_at'),
+    )
+    id: int = Field(primary_key=True, default=None)
+    test_suite_run_id: int = Field(foreign_key="test_suite_run.id")
+    type: str = Field(default="")
+    data: str = Field(default="{}", sa_column=Column(Text))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TestCaseResult(CamelCaseModel, table=True):

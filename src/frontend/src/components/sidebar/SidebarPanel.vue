@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { IconChevronDown, IconChevronUp, IconPlus, IconSearch, IconLogout } from '@tabler/icons-vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -73,6 +73,12 @@ const newChat = () => {
 const logout = () => {
   router.push('/logout');
 }
+
+watch(isSidebarCollapsed, (newVal) => {
+  if (newVal) {
+    agentsCollapsed.value = false;
+  }
+})
 </script>
 
 <template>
@@ -113,7 +119,7 @@ const logout = () => {
         <SidebarDiscoverItem />
       </div>
 
-      <div class="sticky top-0 bg-white z-10 p-2">
+      <div v-if="!isSidebarCollapsed" class="sticky top-0 bg-white z-10 p-2">
         <div class="flex items-center gap-1 text-sm">
           <button @click="agentsCollapsed = !agentsCollapsed">
             <component :is="agentsCollapsed ? IconChevronDown : IconChevronUp" class="w-5 h-5" />

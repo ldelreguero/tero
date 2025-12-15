@@ -25,8 +25,10 @@ os.environ['OPENID_URL'] = ''
 
 from tero.agents.api import AGENT_TOOLS_PATH, AGENT_TOOL_FILES_PATH
 from tero.agents.domain import AgentListItem, Agent
+from tero.agents.test_cases.domain import TestSuiteRun, TestCaseResult
 from tero.api import app
-from tero.core import auth
+from tero.core import repos as repos_module, auth
+from tero.core.env import env # noqa: F401  # used by test files importing common
 from tero.core.api import BASE_PATH # noqa: F401  # used by test files importing common
 from tero.core.assets import solve_asset_path
 from tero.core.env import env # noqa: F401  # used by test files importing common
@@ -84,13 +86,18 @@ def postgres_container() -> Generator[PostgresContainer, None, None]:
 
 @pytest_asyncio.fixture(name="session")
 async def session_fixture(postgres_container: PostgresContainer) -> AsyncGenerator[AsyncSession, None]:
-    engine = create_async_engine(postgres_container.get_connection_url())
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-        await conn.run_sync(SQLModel.metadata.create_all)
-        await _init_db_data(conn)
-    async with AsyncSession(engine, expire_on_commit=False) as ret:
-        yield ret
+    test_engine = create_async_engine(postgres_container.get_connection_url())
+    original_engine = repos_module.engine
+    repos_module.engine = test_engine
+    try:
+        async with test_engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+            await conn.run_sync(SQLModel.metadata.create_all)
+            await _init_db_data(conn)
+        async with AsyncSession(test_engine, expire_on_commit=False) as ret:
+            yield ret
+    finally:
+        repos_module.engine = original_engine
 
 
 async def _init_db_data(conn: AsyncConnection) -> None:
@@ -303,3 +310,13 @@ async def fixture_last_thread_id(session: AsyncSession) -> int:
 @pytest.fixture(name="last_message_id")
 async def fixture_last_message_id(session: AsyncSession) -> int:
     return await find_last_id(col(ThreadMessage.id), session)
+
+
+@pytest.fixture(name="last_suite_run_id")
+async def fixture_last_suite_run_id(session: AsyncSession) -> int:
+    return await find_last_id(col(TestSuiteRun.id), session)
+
+
+@pytest.fixture(name="last_result_id")
+async def fixture_last_result_id(session: AsyncSession) -> int:
+    return await find_last_id(col(TestCaseResult.id), session)
