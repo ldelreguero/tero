@@ -598,7 +598,6 @@ export enum TestCaseResultStatus {
 }
 
 export type TestSuiteExecutionStreamEvent =
-  | { type: 'suite.start'; data: { suiteRunId: number } }
   | { type: 'suite.test.start'; data: { testCaseId: number; resultId: number } }
   | { type: 'suite.test.metadata'; data: { testCaseId: number; resultId: number } }
   | { type: 'suite.test.phase'; data: { phase: string; status?: string; evaluation?: any } }
@@ -899,10 +898,15 @@ export class ApiService {
     return await this.fetchJson(`/agents/${agentId}/tests/${testCaseId}/messages/${messageId}`, 'PUT', message)
   }
 
-  async *runTestSuiteStream(agentId: number, testCaseIds?: number[]): AsyncIterable<TestSuiteExecutionStreamEvent> {
-    const url = `/agents/${agentId}/tests/runs`;
+  async runTestSuite(agentId: number, testCaseIds?: number[]): Promise<TestSuiteRun> {
     const requestBody = testCaseIds ? { test_case_ids: testCaseIds } : {};
-    const resp = await this.fetch(url, 'POST', requestBody);
+    const suiteRun = await this.fetchJson(`/agents/${agentId}/tests/runs`, 'POST', requestBody);
+    return this.parseTestSuiteRunDates(suiteRun);
+  }
+
+  async *streamTestSuiteUpdates(agentId: number, suiteRunId: number): AsyncIterable<TestSuiteExecutionStreamEvent> {
+    const url = `/agents/${agentId}/tests/runs/${suiteRunId}/stream`;
+    const resp = await this.fetch(url, 'GET');
 
     const contentType = resp.headers.get('content-type')
     if (contentType?.startsWith('text/event-stream')) {
@@ -920,10 +924,10 @@ export class ApiService {
   async findTestSuiteRuns(agentId: number, limit: number = 20, offset: number = 0): Promise<TestSuiteRun[]> {
     const searchParams = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() });
     const suiteRuns = await this.fetchJson(`/agents/${agentId}/tests/runs?${searchParams.toString()}`)
-    return suiteRuns.map((suiteRun: any) => this.parseTestSuiteRunDates(suiteRun))
+    return suiteRuns.map((suiteRun: TestSuiteRun) => this.parseTestSuiteRunDates(suiteRun))
   }
 
-  private parseTestSuiteRunDates(suiteRun: any): TestSuiteRun {
+  private parseTestSuiteRunDates(suiteRun: TestSuiteRun): TestSuiteRun {
     return {
       ...suiteRun,
       executedAt: moment.utc(suiteRun.executedAt).toDate(),
@@ -1142,8 +1146,12 @@ export class ApiService {
     return data.transcription
   }
 
-  async toolAuth(toolId: string, code: string, state: string): Promise<void> {
-    await this.post(`/tools/${toolId}/oauth-callback`, { code, state })
+  async completeToolAuth(toolId: string, state: string, code: string): Promise<void> {
+    await this.put(`/tools/${toolId}/oauth/${state}`, { code })
+  }
+
+  async deleteToolAuth(toolId: string, state: string): Promise<void> {
+    await this.delete(`/tools/${toolId}/oauth/${state}`)
   }
 
   async findBudgetUsage(): Promise<BudgetUsage> {

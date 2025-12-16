@@ -5,8 +5,7 @@ import type { TestSuiteExecutionStreamEvent } from '@/services/api'
 export interface TestCaseExecutionState {
     phase: string;
     userMessage?: { id: number; text: string };
-    agentMessage?: { id: number; text: string };
-    agentChunks?: string;
+    agentMessage?: { id: number; text: string, complete: boolean };
     status?: TestCaseResultStatus;
     statusUpdates?: any[];
 }
@@ -29,31 +28,6 @@ const testExecutionStore = reactive({
     setTestCaseResults(results: TestCaseResult[]) {
         this.testCaseResults = results
         this.selectedResult = results.find(r => r.testCaseId === this.selectedResult?.testCaseId)
-    },
-
-    updateChangedTestCaseResults(newResults: TestCaseResult[]) {
-        newResults.forEach(newResult => {
-            const existingIndex = this.testCaseResults.findIndex(r => r.testCaseId === newResult.testCaseId)
-
-            if (existingIndex !== -1) {
-                const existingResult = this.testCaseResults[existingIndex]
-                const hasDifferences =
-                    existingResult.status !== newResult.status ||
-                    existingResult.id !== newResult.id ||
-                    existingResult.testSuiteRunId !== newResult.testSuiteRunId ||
-                    existingResult.evaluatorAnalysis !== newResult.evaluatorAnalysis
-
-                if (hasDifferences) {
-                    this.testCaseResults.splice(existingIndex, 1, newResult)
-
-                    if (this.selectedResult?.testCaseId === newResult.testCaseId) {
-                        this.selectedResult = newResult
-                    }
-                }
-            } else {
-                this.testCaseResults.push(newResult)
-            }
-        })
     },
 
     setExecutionState(testCaseResultId: number, state: TestCaseExecutionState) {
@@ -93,14 +67,8 @@ const testExecutionStore = reactive({
     }
 })
 
-export interface SuitePollingOptions {
-    onSuiteCompleted?: () => void
-    onError?: (error: unknown) => void
-}
-
 export function useTestExecutionStore() {
     const api = new ApiService()
-    let suitePollingInterval: number | null = null
 
     async function loadSuiteRunResults(agentId: number, suiteRunId: number) {
         const results = await api.findTestSuiteRunResults(agentId, suiteRunId)
@@ -113,19 +81,11 @@ export function useTestExecutionStore() {
         options?: {
             currentTestCaseResultId?: number
             agentId?: number
-            onTestStart?: (testCaseId: number) => void
         }
     ): number | undefined {
         let currentTestCaseResultId: number | undefined = options?.currentTestCaseResultId
 
         switch (event.type) {
-            case 'suite.start':
-                if (testExecutionStore.selectedSuiteRun && options?.agentId) {
-                    testExecutionStore.selectedSuiteRun.id = event.data.suiteRunId
-                    testExecutionStore.selectedSuiteRun.agentId = options.agentId
-                }
-                break;
-
             case 'suite.test.start':
                 const testCaseId = event.data.testCaseId;
                 currentTestCaseResultId = event.data.resultId;
@@ -138,13 +98,9 @@ export function useTestExecutionStore() {
 
                 testExecutionStore.setExecutionState(currentTestCaseResultId, {
                     phase: 'executing',
-                    agentChunks: '',
                     statusUpdates: []
                 });
 
-                if (options?.onTestStart) {
-                    options.onTestStart(testCaseId);
-                }
                 break;
 
             case 'suite.test.metadata':
@@ -182,16 +138,16 @@ export function useTestExecutionStore() {
                 if (startExecState) {
                     startExecState.agentMessage = {
                         id: event.data.id,
-                        text: ''
+                        text: '',
+                        complete: false
                     };
-                    startExecState.agentChunks = '';
                 }
                 break;
 
             case 'suite.test.agentMessage.chunk':
                 const chunkExecState = testExecutionStore.getExecutionState(currentTestCaseResultId!);
-                if (chunkExecState) {
-                    chunkExecState.agentChunks += event.data.chunk;
+                if (chunkExecState && chunkExecState.agentMessage) {
+                    chunkExecState.agentMessage.text += event.data.chunk;
                 }
                 break;
 
@@ -199,6 +155,7 @@ export function useTestExecutionStore() {
                 const completeExecState = testExecutionStore.getExecutionState(currentTestCaseResultId!);
                 if (completeExecState && completeExecState.agentMessage) {
                     completeExecState.agentMessage.text = event.data.text;
+                    completeExecState.agentMessage.complete = true;
                 }
                 break;
 
@@ -278,7 +235,7 @@ export function useTestExecutionStore() {
             )
         })
         testExecutionStore.setTestCaseResults(results)
-        setSelectedResult(results[0]);
+        setSelectedResult(singleTestCaseId ? results.find(result => result.testCaseId === singleTestCaseId)! : results[0]);
 
         testExecutionStore.setSelectedSuiteRun({
             id: 0,
@@ -307,7 +264,6 @@ export function useTestExecutionStore() {
 
         try {
             await api.stopTestSuiteRun(selectedSuiteRun.agentId, selectedSuiteRun.id)
-            stopSuitePolling()
             testExecutionStore.testCaseResults.forEach(result => {
                 if (result.status === TestCaseResultStatus.RUNNING || result.status === TestCaseResultStatus.PENDING) {
                     testExecutionStore.setTestCaseResultStatus(result.testCaseId, TestCaseResultStatus.SKIPPED)
@@ -322,57 +278,14 @@ export function useTestExecutionStore() {
         testExecutionStore.clear()
     }
 
-    async function pollSuiteRunStatus(agentId: number, options?: SuitePollingOptions) {
-        try {
-            const suiteRuns = await api.findTestSuiteRuns(agentId, 1, 0)
-            const [latestSuiteRun] = suiteRuns
-            testExecutionStore.setSelectedSuiteRun(latestSuiteRun)
-
-            if (latestSuiteRun.id) {
-                await fetchAndUpdateChangedResults(agentId, latestSuiteRun.id)
-            }
-
-            if (latestSuiteRun.status !== TestSuiteRunStatus.RUNNING) {
-                stopSuitePolling()
-                options?.onSuiteCompleted?.()
-            }
-        } catch (error) {
-            stopSuitePolling()
-            options?.onError?.(error)
-        }
-    }
-
-    async function fetchAndUpdateChangedResults(agentId: number, suiteRunId: number) {
-        const results = await api.findTestSuiteRunResults(agentId, suiteRunId)
-        testExecutionStore.updateChangedTestCaseResults(results)
-    }
-
-    function startSuitePolling(agentId: number, options?: SuitePollingOptions) {
-        stopSuitePolling()
-        void pollSuiteRunStatus(agentId, options)
-        suitePollingInterval = window.setInterval(() => {
-            void pollSuiteRunStatus(agentId, options)
-        }, 1000)
-    }
-
-    function stopSuitePolling() {
-        if (suitePollingInterval !== null) {
-            window.clearInterval(suitePollingInterval)
-            suitePollingInterval = null
-        }
-    }
-
     return {
         testExecutionStore,
         loadSuiteRunResults,
-        fetchAndUpdateChangedResults,
         processStreamEvent,
         updateTestCaseResult,
         initializeTestRun,
         stopSuiteRun,
         setSelectedResult,
         clear,
-        startSuitePolling,
-        stopSuitePolling,
     }
 }

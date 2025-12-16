@@ -36,7 +36,7 @@ const groupedAgents = computed(() => {
     if (agent.type === AgentType.TeroAgent) {
       const hubUrl = agent.url
       if (!hubs.has(hubUrl)) {
-        const isExpanded = hubStates.value.get(hubUrl) ?? false
+        const isExpanded = hubStates.value.get(hubUrl) ?? true
         const hubGroup: HubGroup = {
           url: hubUrl,
           name: getHubName(hubUrl),
@@ -173,7 +173,7 @@ const setHubState = (hubUrl: string, value: boolean) => {
 }
 
 const getHubState = (hubUrl: string): boolean => {
-  return hubStates.value.get(hubUrl) ?? false
+  return hubStates.value.get(hubUrl) ?? true
 }
 </script>
 

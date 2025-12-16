@@ -2,7 +2,7 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { ApiService, Thread, HttpError, TestCase, TestCaseResultStatus, TestSuiteRun, TestSuiteRunStatus } from '@/services/api';
+import { ApiService, Thread, HttpError, TestCaseResultStatus, TestSuiteRun, TestSuiteRunStatus } from '@/services/api';
 import type { TestSuiteExecutionStreamEvent } from '@/services/api';
 import AgentTestcasePanel from '@/components/agent/AgentTestcasePanel.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
@@ -10,14 +10,15 @@ import { useToast } from 'vue-toastification';
 import ToastMessage from '@/components/common/ToastMessage.vue';
 import { useTestCaseStore } from '@/composables/useTestCaseStore';
 import { useTestExecutionStore } from '@/composables/useTestExecutionStore';
+import { handleOAuthRequestsIn, AuthenticationError } from '@/services/toolOAuth';
 
 export type { TestCaseExecutionState } from '@/composables/useTestExecutionStore';
 
 const { t } = useI18n()
 const { handleError } = useErrorHandler()
 const toast = useToast()
-const { testCasesStore, loadTestCases: loadTestCasesFromStore, clearTestCases, setSelectedTestCaseById } = useTestCaseStore()
-const { testExecutionStore, loadSuiteRunResults, processStreamEvent, initializeTestRun, clear: clearExecutionStore, startSuitePolling, stopSuitePolling } = useTestExecutionStore()
+const { testCasesStore, loadTestCases: loadTestCasesFromStore, clearTestCases } = useTestCaseStore()
+const { testExecutionStore, loadSuiteRunResults, processStreamEvent, initializeTestRun, clear: clearExecutionStore } = useTestExecutionStore()
 const api = new ApiService();
 const route = useRoute();
 const router = useRouter();
@@ -30,16 +31,6 @@ const loadingTests = ref<boolean>(true);
 const testRunStartedByCurrentUser = ref<boolean>(false);
 const isComparingResultWithTestSpec = ref<boolean>(false);
 
-const getSuitePollingOptions = () => ({
-  onSuiteCompleted: () => {
-    testRunStartedByCurrentUser.value = false
-  },
-  onError: (error: unknown) => {
-    handleError(error)
-    testRunStartedByCurrentUser.value = false
-  }
-})
-
 const startChat = async () => {
   try {
     const thread = await api.startThread(agentId.value!);
@@ -49,7 +40,7 @@ const startChat = async () => {
       router.push('/not-found');
     }
   }
-};
+}
 
 const handleSelectChat = (chat: Thread) => {
   threadId.value = chat.id;
@@ -69,18 +60,12 @@ const handleSelectExecution = async (execution: TestSuiteRun) => {
 
 const processSuiteExecutionStream = async (
   eventStream: AsyncIterable<TestSuiteExecutionStreamEvent>,
-  options?: {
-    onTestStart?: (testCaseId: number) => void
-  }
 ) => {
   let currentTestCaseResultId: number | undefined = undefined;
-  let is409Error = false;
-
   try {
     for await (const event of eventStream) {
       const updatedResultId = processStreamEvent(event, {
         agentId: agentId.value,
-        onTestStart: options?.onTestStart,
         currentTestCaseResultId
       });
       currentTestCaseResultId = updatedResultId ?? currentTestCaseResultId;
@@ -93,52 +78,71 @@ const processSuiteExecutionStream = async (
       }
     }
   } catch (error) {
-    if (error instanceof HttpError && error.status === 409) {
-      is409Error = true;
+    if (currentTestCaseResultId) {
+      const testCaseResult = testExecutionStore.testCaseResults.find(tr => tr.id === currentTestCaseResultId);
+      if (testCaseResult) {
+        testCaseResult.status = TestCaseResultStatus.ERROR;
+      }
+      testExecutionStore.setExecutionState(currentTestCaseResultId, {
+        phase: 'completed',
+        status: TestCaseResultStatus.ERROR
+      });
+    }
+    handleError(error)
+  } finally {
+    testExecutionStore.clearExecutionStates();
+    testRunStartedByCurrentUser.value = false;
+  }
+}
+
+const runTestSuite = async (testCaseIds?: number[]) => {
+  isEditingTestCase.value = false
+  testRunStartedByCurrentUser.value = true
+
+  try {
+    initializeTestRun(agentId.value!, testCasesStore.testCases, testCaseIds?.[0])
+    const suiteRun = await handleOAuthRequestsIn(
+      () => api.runTestSuite(agentId.value!, testCaseIds),
+      api
+    )
+    testExecutionStore.setSelectedSuiteRun(suiteRun)
+    await processSuiteExecutionStream(api.streamTestSuiteUpdates(agentId.value!, suiteRun.id))
+  } catch (error) {
+    if (error instanceof AuthenticationError) {
+      toast.error(
+        { component: ToastMessage, props: { message: t('authenticationCancelled') } },
+        { timeout: 5000, icon: false }
+      )
+      isEditingTestCase.value = true
+      testRunStartedByCurrentUser.value = false
+      return
+    }
+    await handleRunError(error)
+  }
+}
+
+const handleRunError = async (error: unknown) => {
+  if (error instanceof HttpError && error.status === 409) {
+    try {
       toast.info(
         { component: ToastMessage, props: { message: t('suiteAlreadyRunning') } },
         { timeout: 5000, icon: false }
       )
       testRunStartedByCurrentUser.value = false
-      startSuitePolling(agentId.value!, getSuitePollingOptions())
-    } else {
-      if (currentTestCaseResultId) {
-        const testCaseResult = testExecutionStore.testCaseResults.find(tr => tr.id === currentTestCaseResultId);
-        if (testCaseResult) {
-          testCaseResult.status = TestCaseResultStatus.ERROR;
-        }
-        testExecutionStore.setExecutionState(currentTestCaseResultId, {
-          phase: 'completed',
-          status: TestCaseResultStatus.ERROR
-        });
+      const suiteRuns = await api.findTestSuiteRuns(agentId.value!, 1, 0)
+      if (suiteRuns.length && suiteRuns[0].status === TestSuiteRunStatus.RUNNING) {
+        testExecutionStore.setSelectedSuiteRun(suiteRuns[0])
+        const results = await loadSuiteRunResults(agentId.value!, suiteRuns[0].id)
+        testExecutionStore.setSelectedResult(results[0])
+        await processSuiteExecutionStream(api.streamTestSuiteUpdates(agentId.value!, suiteRuns[0].id))
       }
+    } catch (error) {
       handleError(error)
     }
-  } finally {
-    testExecutionStore.clearExecutionStates();
-    if (!is409Error) {
-      testRunStartedByCurrentUser.value = false;
-    }
+  } else {
+    handleError(error)
+    testRunStartedByCurrentUser.value = false
   }
-}
-
-const handleRunTests = async () => {
-  isEditingTestCase.value = false
-  testRunStartedByCurrentUser.value = true
-  initializeTestRun(agentId.value!, testCasesStore.testCases)
-  await processSuiteExecutionStream(api.runTestSuiteStream(agentId.value!))
-}
-
-const handleRunSingleTest = async (singleTestCaseId: number) => {
-  isEditingTestCase.value = false
-  testRunStartedByCurrentUser.value = true
-  initializeTestRun(agentId.value!, testCasesStore.testCases, singleTestCaseId)
-  setSelectedTestCaseById(singleTestCaseId)
-  await processSuiteExecutionStream(api.runTestSuiteStream(agentId.value!, [singleTestCaseId]), {
-    onTestStart: (testCaseId) => {
-      setSelectedTestCaseById(testCaseId)
-    }
-  })
 }
 
 onMounted(async () => {
@@ -163,7 +167,7 @@ const loadTestCases = async (id: number) => {
       testExecutionStore.setSelectedSuiteRun(suiteRuns[0])
       const results = await loadSuiteRunResults(id, suiteRuns[0].id)
       testExecutionStore.setSelectedResult(results[0])
-      startSuitePolling(id, getSuitePollingOptions())
+      processSuiteExecutionStream(api.streamTestSuiteUpdates(id, suiteRuns[0].id))
     }
   } catch (e) {
     handleError(e)
@@ -178,7 +182,6 @@ const onEditingTestCase = (editing: boolean) => {
 }
 
 onBeforeRouteUpdate(async (to) => {
-  stopSuitePolling();
   testRunStartedByCurrentUser.value = false;
   clearTestCases();
   clearExecutionStore();
@@ -189,10 +192,6 @@ onBeforeRouteUpdate(async (to) => {
     await loadTestCases(agentId.value);
   }
 });
-
-onBeforeUnmount(() => {
-  stopSuitePolling();
-});
 </script>
 
 <template>
@@ -202,8 +201,8 @@ onBeforeUnmount(() => {
       <AgentEditorPanel v-if="threadId" :selected-thread-id="threadId"
         @show-test-case-editor="showTestCaseEditor = $event" :loading-tests="loadingTests"
         @editing-testcase="onEditingTestCase" :editing-testcase="isEditingTestCase"
-        @import-agent="loadTestCases(agentId!)" :test-cases="testCasesStore.testCases" @run-tests="handleRunTests"
-        @run-single-test="handleRunSingleTest" @select-execution="handleSelectExecution"
+        @import-agent="loadTestCases(agentId!)" :test-cases="testCasesStore.testCases" @run-tests="runTestSuite()"
+        @run-single-test="(id: number) => runTestSuite([id])" @select-execution="handleSelectExecution"
         :is-comparing-result-with-test-spec="isComparingResultWithTestSpec"
         :test-spec-messages="testCasePanel?.testSpecMessages"/>
     </template>
@@ -222,11 +221,13 @@ onBeforeUnmount(() => {
 {
   "en": {
     "suiteExecutionFailed": "Test suite execution failed",
-    "suiteAlreadyRunning": "Please wait for the test suite to finish running before starting a new execution"
+    "suiteAlreadyRunning": "Please wait for the test suite to finish running before starting a new execution",
+    "authenticationCancelled": "Tool authentication was cancelled. Please authenticate to run tests."
   },
   "es": {
     "suiteExecutionFailed": "Falló la ejecución de la suite de tests",
-    "suiteAlreadyRunning": "Espera a que el test suite termine de correr para lanzar una nueva ejecucion"
+    "suiteAlreadyRunning": "Espera a que el test suite termine de correr para lanzar una nueva ejecucion",
+    "authenticationCancelled": "La autenticación de la herramienta fue cancelada. Por favor autentícate para ejecutar los tests."
   }
 }
 </i18n>
