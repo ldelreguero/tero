@@ -22,6 +22,7 @@ from langchain_core.messages.utils import (
 from langchain_core.tools import tool, BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt.tool_node import ToolNode
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..agents.domain import Agent
@@ -71,8 +72,10 @@ class AgentEngine:
             agent_tools = await self.load_tools(stack, thread_id=messages[0].thread_id)
             tools = [ lt for t in agent_tools for lt in await t.build_langchain_tools() ]
             tools.append(clock)
+            # Enable error handling so ToolException from MCP tools (execution errors) 
+            # are shown to the LLM instead of crashing the agent 
             agent = create_react_agent(
-                llm, tools, pre_model_hook=self._build_message_trimmer(llm, tools)
+                llm, ToolNode(tools, handle_tool_errors=True), pre_model_hook=self._build_message_trimmer(llm, tools)
             )
 
             input = self._build_input(messages)

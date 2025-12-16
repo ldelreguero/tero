@@ -63,6 +63,7 @@ const MAX_FILES = 5
 const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
 const attachedFiles = ref<UploadedFile[]>(props.initialFiles || [])
 const attachedFilesError = ref<ErrorMessage | undefined>(undefined)
+const allowedExtensions = ['pdf', 'txt', 'md', 'csv', 'xlsx', 'xls', 'png', 'jpg', 'jpeg', 'har', 'json', 'svg']
 
 const transcriptionRef = ref<InstanceType<typeof AudioTranscription> | null>(null)
 const isRecordingAudio = ref<boolean>(false);
@@ -101,7 +102,7 @@ watch(props.chat.findPrompts, async () => {
 })
 
 watch(inputText, async() => {
-  if (inputText.value.startsWith('/')) {
+  if (inputText.value.startsWith('/') && props.enablePrompts !== false) {
     if (!isShowingPrompts.value) {
       selectedPromptIndex.value = 0;
       isShowingPrompts.value = true
@@ -395,7 +396,7 @@ defineExpose({
               :disabled="!chat.supportsFileUpload()"
               :maxFiles="MAX_FILES"
               :attachedFiles="attachedFiles" 
-              :allowedExtensions="['pdf', 'txt', 'md', 'csv', 'xlsx', 'xls', 'png', 'jpg', 'jpeg', 'har', 'json', 'svg']"
+              :allowedExtensions="allowedExtensions"
               @filesChange="onFilesChange"
               @error="attachedFilesError = $event">
                 <div class="w-full">

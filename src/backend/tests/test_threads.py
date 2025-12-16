@@ -9,6 +9,7 @@ from sse_starlette import ServerSentEvent
 
 from .common import *
 
+from tero.agents.domain import AgentListItem
 from tero.files.domain import FileMetadata, FileProcessor, FileMetadataWithContent
 from tero.threads.api import THREADS_PATH, THREAD_PATH, THREAD_MESSAGES_PATH, THREAD_MESSAGE_PATH, THREAD_FILE_PATH
 from tero.threads.domain import ThreadListItem, ThreadMessageOrigin, ThreadMessagePublic
@@ -181,6 +182,8 @@ async def _assert_response(resp: Response, response: str, user_message_id: int, 
         for event in decoded_chunk.split(separator):
             if event.startswith("data: "):
                 buffer.append(event[6:])
+            elif event.startswith("event: heartbeat"):
+                continue
             else:
                 flush_buffer()
                 if event.startswith("event: metadata") and minutes_saved is None:

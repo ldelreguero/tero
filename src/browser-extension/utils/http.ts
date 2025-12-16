@@ -12,22 +12,24 @@ const fetchResponse = async (url: string, options?: RequestInit) => {
     if (ret.headers.get('Content-Type') === 'application/json') {
       let json = JSON.parse(body)
       if ('detail' in json) {
-        throw new HttpServiceError(json.detail, ret.status)
+        throw new HttpServiceError(json.detail, ret.status, body)
       }
     }
-    throw new HttpServiceError(undefined, ret.status)
+    throw new HttpServiceError(undefined, ret.status, body)
   }
   return ret
 }
 
 export class HttpServiceError extends Error {
-  detail?: string
+  detail?: string | object
   status?: number
+  body?: string
 
-  constructor(detail?: string, status?: number) {
+  constructor(detail?: string | object, status?: number, body?: string) {
     super()
     this.detail = detail
     this.status = status
+    this.body = body
   }
 
 }

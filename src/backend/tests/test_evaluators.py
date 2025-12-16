@@ -18,7 +18,7 @@ from tero.agents.test_cases.domain import TestCaseResultStatus, TestSuiteRun, Te
 from tero.ai_models.domain import LlmTemperature, ReasoningEffort
 
 
-EVALUATOR_MODEL_ID = "gpt-5-nano"
+EVALUATOR_MODEL_ID = "gpt-5-mini"
 EVALUATOR_TEMPERATURE = LlmTemperature.NEUTRAL
 EVALUATOR_REASONING_EFFORT = ReasoningEffort.MEDIUM
 

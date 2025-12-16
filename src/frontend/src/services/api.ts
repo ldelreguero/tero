@@ -528,7 +528,8 @@ export class TestCase {
 export enum TestSuiteRunStatus {
   RUNNING = 'RUNNING',
   SUCCESS = 'SUCCESS',
-  FAILURE = 'FAILURE'
+  FAILURE = 'FAILURE',
+  CANCELLING = 'CANCELLING'
 }
 
 export class TestSuiteRun {
@@ -1128,10 +1129,12 @@ export class ApiService {
           console.warn(`Error event sent by server in response to ${url}`, ev)
           throw new HttpError(resp.status, ev.data)
         }
-
+        if (ev.event === 'heartbeat') {
+          continue
+        }
         yield {
           event: ev.event || 'message',
-          data: ev.event ? (JSON.parse(ev.data) as T) : (ev.data as T)
+          data: ev.event && ev.data ? (JSON.parse(ev.data) as T) : (ev.data as T)
         }
       }
     }

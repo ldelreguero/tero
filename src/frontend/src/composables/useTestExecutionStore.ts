@@ -264,11 +264,13 @@ export function useTestExecutionStore() {
 
         try {
             await api.stopTestSuiteRun(selectedSuiteRun.agentId, selectedSuiteRun.id)
+            selectedSuiteRun.status = TestSuiteRunStatus.CANCELLING
             testExecutionStore.testCaseResults.forEach(result => {
                 if (result.status === TestCaseResultStatus.RUNNING || result.status === TestCaseResultStatus.PENDING) {
                     testExecutionStore.setTestCaseResultStatus(result.testCaseId, TestCaseResultStatus.SKIPPED)
                 }
             })
+            testExecutionStore.clearExecutionStates()
         } finally {
             testExecutionStore.isStoppingSuite = false
         }

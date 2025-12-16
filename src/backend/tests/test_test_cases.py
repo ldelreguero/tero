@@ -241,7 +241,7 @@ async def _assert_test_case_stream(resp: Response, suite_run_id: int, test_cases
                 if event:
                     if remove_analysis_from_response:
                         # Remove the entire "analysis" field including null or string values, and any surrounding commas
-                        event = re.sub(r'(?:,\s*)?"analysis"\s*:\s*(null|"[^"]*")(?:\s*,)?', '', event)
+                        event = re.sub(r'(?:,\s*)?"analysis"\s*:\s*(null|"(?:\\.|[^"\\])*")(?:\s*,)?', '', event)
                     events.append(f"{event}{separator}".encode())
 
     flush_buffer()

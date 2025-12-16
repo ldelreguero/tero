@@ -157,7 +157,7 @@ class AgentActionEvent(AgentEvent):
     tool_name: Optional[str] = None
     description: Optional[str] = None
     result: Optional[Union[List[str], str]] = None
-    args: Optional[str] = None
+    args: Optional[dict[str, Any]] = None
 
 
 class AgentFileEvent(AgentEvent):

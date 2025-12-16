@@ -11,7 +11,7 @@ from .common import *
 
 from tero.agents.api import AGENT_TOOL_FILE_PATH
 from tero.tools.browser import BrowserTool, BROWSER_TOOL_ID
-from tero.tools.docs import DocsTool
+from tero.tools.docs import DocsTool, DOCS_TOOL_ID
 from tero.tools.jira import JiraTool
 from tero.tools.mcp import McpTool
 from tero.tools.web import WebTool, WEB_TOOL_ID
@@ -124,8 +124,8 @@ def playwright_container_url(containers_network: Network) -> Generator[str, None
             .with_kwargs(entrypoint="node", user="0:0")\
             .with_command(["cli.js", "--headless", "--browser=chromium", "--no-sandbox", f"--port={port}", "--allowed-hosts=*", "--host=0.0.0.0"]) \
             .with_volume_mapping(output_dir, "/tmp/playwright-output", "rw") \
+            .waiting_for(LogMessageWaitStrategy(f"Listening on http://localhost:{port}")) \
             as container:
-        container.waiting_for(LogMessageWaitStrategy(f"Listening on http://localhost:{port}"))
         yield f"http://{container.get_container_host_ip()}:{container.get_exposed_port(port)}"
 
 

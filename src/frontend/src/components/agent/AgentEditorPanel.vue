@@ -65,6 +65,8 @@ const selectedTeam = ref<number | null>(null)
 const activeTab = ref<string>('0')
 const showImportAgent = ref(false)
 const showPastExecutions = ref(false)
+const showGenerateDialog = ref(false)
+const selectedField = ref<AutomaticAgentField | null>(null)
 
 const loadAgentData = async (agentIdStr: string) => {
   const agentId = parseInt(agentIdStr)
@@ -220,18 +222,6 @@ const generateAgentField = async (field: AutomaticAgentField, callback: (v: stri
   }
 }
 
-const generateName = async () => {
-  await generateAgentField(AutomaticAgentField.NAME, (v) => agent.value!.name = v, (v) => isGenerating.value.name = v)
-}
-
-const generateDescription = async () => {
-  await generateAgentField(AutomaticAgentField.DESCRIPTION, (v) => agent.value!.description = v, (v) => isGenerating.value.description = v)
-}
-
-const generateSystemPrompt = async () => {
-  await generateAgentField(AutomaticAgentField.SYSTEM_PROMPT, (v) => agent.value!.systemPrompt = v, (v) => isGenerating.value.systemPrompt = v)
-}
-
 const handleStarterDelete = async (starterId: number) => {
   try {
     await removePrompt(agent.value!.id, starterId)
@@ -317,6 +307,27 @@ const onSelectExecution = (execution: TestSuiteRun) => {
   emit('selectExecution', execution)
   showPastExecutions.value = false
 }
+
+const onGenerateDialog = async (field: AutomaticAgentField) => {
+  showGenerateDialog.value = true
+  selectedField.value = field
+}
+
+const onGenerate = async () => {
+  showGenerateDialog.value = false
+  switch (selectedField.value) {
+    case AutomaticAgentField.NAME:
+      await generateAgentField(selectedField.value, (v) => agent.value!.name = v, (v) => isGenerating.value.name = v)
+      break
+    case AutomaticAgentField.DESCRIPTION:
+      await generateAgentField(selectedField.value, (v) => agent.value!.description = v, (v) => isGenerating.value.description = v)
+      break
+    case AutomaticAgentField.SYSTEM_PROMPT:
+      await generateAgentField(selectedField.value, (v) => agent.value!.systemPrompt = v, (v) => isGenerating.value.systemPrompt = v)
+      break
+  }
+  selectedField.value = null
+}
 </script>
 
 <template>
@@ -395,13 +406,13 @@ const onSelectExecution = (execution: TestSuiteRun) => {
               <label for="name">{{ t('nameLabel') }}</label>
               <InteractiveInput id="name" v-model="agent.name" :maxlength="nameMaxLength"
                 :required="isSelectedPublicTeam" @blur="updateAgent" :placeholder="t('namePlaceholder')"
-                @end-icon-click="generateName" end-icon="IconWand" :loading="isGenerating.name" />
+                @end-icon-click="onGenerateDialog(AutomaticAgentField.NAME)" end-icon="IconWand" :loading="isGenerating.name" />
             </div>
             <div class="form-field relative">
               <label for="description">{{ t('descriptionLabel') }}</label>
               <InteractiveInput id="description" v-model="agent.description" :maxlength="descriptionMaxLength"
                 :required="isSelectedPublicTeam" @blur="updateAgent" :placeholder="t('descriptionPlaceholder')"
-                @end-icon-click="generateDescription" end-icon="IconWand" :loading="isGenerating.description" />
+                @end-icon-click="onGenerateDialog(AutomaticAgentField.DESCRIPTION)" end-icon="IconWand" :loading="isGenerating.description" />
             </div>
             <AgentModelSelect
               v-model:model-id="agent.modelId"
@@ -414,7 +425,7 @@ const onSelectExecution = (execution: TestSuiteRun) => {
               <label for="systemPrompt">{{ t('systemPromptLabel') }}</label>
               <InteractiveInput id="systemPrompt" v-model="agent.systemPrompt" @blur="updateAgent" :rows="10"
                 :placeholder="t('systemPromptPlaceholder')" end-icon="IconWand" :loading="isGenerating.systemPrompt"
-                @end-icon-click="generateSystemPrompt" />
+                @end-icon-click="onGenerateDialog(AutomaticAgentField.SYSTEM_PROMPT)" />
             </div>
             <div class="form-field relative">
               <AgentConversationStarters :starters="starters" @delete="handleStarterDelete" :agent="agent"
@@ -469,6 +480,7 @@ const onSelectExecution = (execution: TestSuiteRun) => {
     </div>
   </Dialog>
   <AgentImportDialog v-model:visible="showImportAgent" @import="onImportAgent" />
+  <AgentGenerateDialog v-model:visible="showGenerateDialog" :field="selectedField!" @generate="onGenerate" />
   <AgentPastExecutionsDialog v-if="agent" v-model:visible="showPastExecutions" :agent-id="agent.id" @select-execution="onSelectExecution" />
 </template>
 
