@@ -17,7 +17,7 @@ defineProps<{ minimized?: boolean }>()
                     <slot name="headerActions"/>
                 </div>
             </div>
-            <div class="border-t border-gray-300 absolute left-0 right-0"></div>
+            <div class="border-t border-auxiliar-gray absolute left-0 right-0"></div>
         </div>
         <main v-if="!minimized" class="grow overflow-y-auto overflow-x-hidden p-2">
             <slot name="content" />

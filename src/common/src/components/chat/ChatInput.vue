@@ -368,10 +368,10 @@ defineExpose({
 
 <template>
   <div>
-    <div class="flex-shrink-0 bg-white" :class="!borderless ? 'p-2 sm:p-4' : ''">
+    <div class="flex-shrink-0 bg-surface" :class="!borderless ? 'p-2 sm:p-4' : ''">
       <div class="max-w-[837px] mx-auto w-full">
         <div
-          class="flex flex-col gap-1 relative rounded-xl bg-white"
+          class="flex flex-col gap-1 relative rounded-xl bg-surface"
           :class="!borderless ? 'border border-auxiliar-gray focus-within:border-abstracta shadow-sm p-2' : ''">
           <div class="w-full absolute -translate-x-2 -translate-y-full -mt-6">
             <PromptEditor v-if="editingPrompt" 

@@ -25,7 +25,7 @@ const onFileDrop = async (event: DragEvent) => {
 const onIconSelect = async (files: FileList) => {
   const img = await loadImage(files[0])
   icon.value = await scaledImageBase64(img)
-  iconBgColor.value = 'F4F4F4'
+  iconBgColor.value = undefined
   emit("change")
 }
 
@@ -56,7 +56,7 @@ const scaledImageBase64 = (img: HTMLImageElement): string => {
 
 
 <template>
-  <div class="cursor-pointer relative border-1 border-auxiliar-gray rounded-full overflow-hidden" :style="{ backgroundColor: iconBgColor ? '#' + iconBgColor : 'bg-white' }">
+  <div class="cursor-pointer relative border-1 border-auxiliar-gray rounded-full overflow-hidden" :style="{ backgroundColor: iconBgColor ? '#' + iconBgColor : 'var(--color-surface-muted)' }">
     <input type="file" ref="fileInput" @change="onFileSelect" class="hidden" accept=".png" />
     <img @click="onBrowseIcon" @drop.prevent="onFileDrop" @dragover.prevent :src="icon ? `data:image/png;base64,${icon}` : addAgentIcon" class="w-12 h-12" v-tooltip.bottom="t('uploadIcon')"/>
   </div>

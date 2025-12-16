@@ -412,7 +412,7 @@ defineExpose({
                     </div>
                 </div>
                 <div v-if="isEditing && selectedMessage"
-                    class="flex flex-col gap-1 p-3 relative rounded-xl border border-auxiliar-gray focus-within:border-abstracta bg-white shadow-sm"
+                    class="flex flex-col gap-1 p-3 relative rounded-xl border border-auxiliar-gray focus-within:border-abstracta bg-surface shadow-sm"
                     :class="selectedMessage ? selectedMessage?.isUser ? '!border-primary' : '!border-info' : ''">
                     <span class="absolute top-[-.85rem] right-20 font-semibold rounded-full px-4 py-1 text-sm z-10"
                         :class="{ 'bg-abstracta text-white': selectedMessage?.isUser, 'bg-info text-white': !selectedMessage?.isUser }">

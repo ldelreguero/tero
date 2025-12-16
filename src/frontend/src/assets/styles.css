@@ -41,7 +41,7 @@
 }
 
 .p-select-option {
-  @apply !border-white !border;
+  @apply !border-surface !border;
 }
 
 .p-select-option.p-select-option-selected {
@@ -57,7 +57,7 @@
 }
 
 .p-selectbutton {
-  @apply !bg-white !rounded-xl !border !border-auxiliar-gray p-1;
+  @apply !bg-surface !rounded-xl !border !border-auxiliar-gray p-1;
 }
 
 .p-togglebutton {
@@ -77,7 +77,7 @@
 }
 
 .p-toggleswitch-handle {
-  @apply !bg-white !border-auxiliar-gray !border;
+  @apply !bg-surface !border-auxiliar-gray !border;
 }
 
 .p-toggleswitch-slider {
@@ -173,6 +173,38 @@
 /* Hide last row border */
 .p-datatable .p-datatable-tbody>tr:last-child>td {
   @apply !border-b-0;
+}
+
+/* Dark mode: ensure DataTable surfaces inherit tokens */
+.p-datatable,
+.p-datatable-header,
+.p-datatable-footer,
+.p-datatable-table-container,
+.p-datatable-wrapper,
+.p-datatable-table {
+  @apply !bg-transparent;
+}
+
+.p-datatable-thead > tr > th {
+  @apply !bg-transparent !text-light-gray;
+}
+
+.p-datatable-tbody > tr {
+  @apply !bg-transparent;
+}
+
+.p-datatable-tbody > tr:hover {
+  @apply !bg-pale;
+}
+
+.p-datatable-tbody > tr > td {
+  @apply !bg-transparent !text-content;
+}
+
+/* Dark mode: PrimeVue tab panels should not paint white */
+.p-tabpanels,
+.p-tabpanel {
+  @apply !bg-transparent !text-content;
 }
 
 .p-datatable-header-cell,

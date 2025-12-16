@@ -39,18 +39,18 @@ const onSave = () => {
 .modal-form textarea,
 .modal-form input {
   resize: none;
-  outline-color: #3d363e;
+  outline-color: var(--color-auxiliar-gray);
   border: var(--border);
   border-radius: var(--spacing);
 }
 
 .modal-form .warning {
-  color: orange;
-  outline-color: orange;
+  color: var(--color-warn);
+  outline-color: var(--color-warn);
 }
 
 .modal-form .error {
-  color: red;
-  outline-color: red;
+  color: var(--color-error);
+  outline-color: var(--color-error);
 }
 </style>

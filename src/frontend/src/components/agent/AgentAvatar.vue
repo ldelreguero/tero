@@ -11,7 +11,7 @@ const { agent, desaturated = false, showSharedStatus = false } = defineProps<{
 
 <template>
   <Avatar :style="{
-    backgroundColor: agent.iconBgColor ? '#' + agent.iconBgColor : '#d3c0ff',
+    backgroundColor: agent.iconBgColor ? '#' + agent.iconBgColor : 'var(--color-abstracta-lighter)',
     filter: desaturated ? 'grayscale(100%)' : 'none'
   }" shape="circle" :size="size">
     <template #icon>

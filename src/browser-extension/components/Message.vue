@@ -119,13 +119,13 @@ onBeforeUnmount(() => {
     <div class="flex flex-row items-start">
       <div class="flex w-5 h-5 mr-1 items-center flex-shrink-0">
         <template v-if="isUser" class="">
-          <IconCircleFilled class="text-violet-600" />
+          <IconCircleFilled class="text-primary" />
         </template>
         <template v-else-if="!isUser && isSuccess">
           <img :src="agent.logo" class="rounded-full object-cover" />
         </template>
         <template v-else>
-          <IconExclamationCircle class="text-red-600" />
+          <IconExclamationCircle class="text-error" />
         </template>
       </div>
       <div class="flex flex-col">
@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
 
 .rendered-msg pre {
   padding: 15px;
-  background: #202126;
+  background: var(--color-surface-muted);
   border-radius: 8px;
   text-wrap: wrap;
 }
@@ -178,7 +178,7 @@ div a {
 }
 
 .rendered-msg thead tr {
-  background-color: #ece6f5;
+  background-color: var(--color-surface-muted);
 }
 
 .rendered-msg th,
@@ -188,7 +188,7 @@ div a {
 }
 
 .rendered-msg tbody tr:hover {
-  background-color: #f1f1f1;
+  background-color: var(--color-auxiliar-gray);
 }
 
 .echarts {

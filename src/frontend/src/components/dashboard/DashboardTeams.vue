@@ -194,7 +194,7 @@ watch(() => showModal.value, async () => {
   </div>
   <Dialog class="w-150" :visible="showModal" :modal="true" :closable="false" :draggable="false" :resizable="false" :close-on-escape="false" :dismissable-mask="false" @update:visible="onCloseModal" @hide="onCloseModal">
       <template #header>
-          <div class="flex justify-between items-center w-full border-b border-auxiliar-gray pb-4 sticky top-0 bg-white z-10">
+          <div class="flex justify-between items-center w-full border-b border-auxiliar-gray pb-4 sticky top-0 bg-surface z-10">
             <div class="flex flex-row items-center gap-2">
               <h3>{{ editingTeam ? t('editTeam') : t('createTeam') }}</h3>
               <div v-if="isSaving" class="flex flex-row px-2 items-center text-sm text-dark-gray animate-pulse">

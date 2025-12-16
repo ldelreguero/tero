@@ -17,7 +17,7 @@ const emit = defineEmits<{
   <div class="flex flex-wrap" v-if="attachedFiles.length">
     <div class="flex overflow-x-auto whitespace-nowrap" :class="[variant === 'input' ? 'px-2 pb-4' : '', attachedFiles.length >= 3 ? 'pb-3 mb-2' : '']" v-if="attachedFiles.length">
       <div v-for="(file, idx) in attachedFiles" :key="idx" 
-        class="inline-flex items-center whitespace-nowrap rounded-xl bg-white border border-auxiliar-gray px-3 py-1.5 mr-2">
+        class="inline-flex items-center whitespace-nowrap rounded-xl bg-surface border border-auxiliar-gray px-3 py-1.5 mr-2">
         <IconPhoto v-if="file.contentType.startsWith('image/')" class="mr-2" />
         <IconFileText v-else class="mr-2" />
         <span class="mr-2" v-tooltip.bottom="{value: file.name, showDelay: 1000}">{{ truncateFileName(file.name) }}</span>

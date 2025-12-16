@@ -30,7 +30,7 @@ div .Vue-Toastification__container {
 }
 
 div .Vue-Toastification__toast--error {
-  @apply bg-white p-2 text-sm text-black font-sans rounded-md align-middle;
+  @apply bg-surface p-2 text-sm text-content font-sans rounded-md align-middle;
 }
 
 div .Vue-Toastification__icon {
@@ -38,7 +38,7 @@ div .Vue-Toastification__icon {
 }
 
 div .Vue-Toastification__close-button {
-  @apply text-gray-500 h-fit;
+  @apply text-content-muted h-fit;
 }
 
 div .Vue-Toastification__progress-bar {

@@ -19,7 +19,7 @@ onMounted(()=>{
 
 </script>
 <template>
-  <div class="bg-white rounded-xl shadow-md px-2 py-2 my-2 border border-auxiliar-gray">
+  <div class="bg-surface rounded-xl shadow-md px-2 py-2 my-2 border border-auxiliar-gray">
     <div class="flex items-center justify-between gap-2">
       <Form class="flex w-full" @submit="onSave(inputValue)">
         <input

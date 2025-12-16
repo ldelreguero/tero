@@ -38,7 +38,7 @@ app.use(PrimeVue, {
   theme: {
     preset: primeTheme,
     options: {
-      darkModeSelector: false || 'none',
+      darkModeSelector: 'html.dark',
     }
   }
 })

@@ -6,14 +6,14 @@ defineProps({ message: String })
 
 const addTargetBlankToLinks = (md: MarkdownIt) => {
   const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, self) {
-    return self.renderToken(tokens, idx, options);
+    return self.renderToken(tokens, idx, options)
   }
   md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
-    tokens[idx].attrSet('target', '_blank');
-    return defaultRender(tokens, idx, options, env, self);
-  };
+    tokens[idx].attrSet('target', '_blank')
+    return defaultRender(tokens, idx, options, env, self)
+  }
 }
-addTargetBlankToLinks(md);
+addTargetBlankToLinks(md)
 </script>
 
 <template>
@@ -28,7 +28,7 @@ div .Vue-Toastification__container {
 }
 
 div .Vue-Toastification__toast {
-  @apply bg-white p-2 text-sm text-dark-gray font-sans rounded-md align-middle;
+  @apply bg-surface p-2 text-sm text-content font-sans rounded-md align-middle;
 }
 
 div .Vue-Toastification__icon {
@@ -36,7 +36,7 @@ div .Vue-Toastification__icon {
 }
 
 div .Vue-Toastification__close-button {
-  @apply text-light-gray h-fit;
+  @apply text-content-muted h-fit;
 }
 
 div .Vue-Toastification__toast--error .Vue-Toastification__progress-bar {

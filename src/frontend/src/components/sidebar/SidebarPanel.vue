@@ -10,6 +10,7 @@ import SidebarSkeleton from './SidebarSkeleton.vue';
 import SidebarSearch from './SidebarSearch.vue';
 import { type Thread, type Agent, ApiService } from '@/services/api';
 import { useSidebar } from '@/composables/useSidebar';
+import ThemeToggle from '@/components/common/ThemeToggle.vue';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -113,7 +114,7 @@ const logout = () => {
         <SidebarDiscoverItem />
       </div>
 
-      <div class="sticky top-0 bg-white z-10 p-2">
+      <div class="sticky top-0 bg-surface z-10 p-2">
         <div class="flex items-center gap-1 text-sm">
           <button @click="agentsCollapsed = !agentsCollapsed">
             <component :is="agentsCollapsed ? IconChevronDown : IconChevronUp" class="w-5 h-5" />
@@ -130,7 +131,7 @@ const logout = () => {
       </div>
 
       <div v-if="!isSidebarCollapsed" class="mt-5">
-        <div class="sticky top-0 bg-white z-10">
+        <div class="sticky top-0 bg-surface z-10">
           <div class="flex justify-between items-center p-2">
             <div class="flex items-center gap-1 text-sm">
               <button @click="chatsCollapsed = !chatsCollapsed">
@@ -161,6 +162,7 @@ const logout = () => {
     </div>
 
     <div class="sticky bottom-0 border-t border-auxiliar-gray">
+      <ThemeToggle v-if="!isSidebarCollapsed" />
       <div v-if="!isSidebarCollapsed" class="px-2 sm:px-3 pt-3">
         <ConsumedBudget />
       </div>
