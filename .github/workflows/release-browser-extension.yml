@@ -1,0 +1,36 @@
+name: Release Browser Extension
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish-browser-extension:
+    environment: chrome-store
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23
+          cache: 'pnpm'
+          cache-dependency-path: 'src/pnpm-lock.yaml'
+      - name: Build and Publish Extension
+        working-directory: src/browser-extension
+        env:
+          CHROME_EXTENSION_ID: fimbaimlephkekbpfdidmkenhjddimak
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          export EXTENSION_VERSION="${{ github.event.release.tag_name }}"
+          export EXTENSION_VERSION="${EXTENSION_VERSION#v}"
+          pnpm install
+          pnpm run zip
+          pnpm run publish
+
