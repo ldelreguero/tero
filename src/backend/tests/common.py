@@ -28,7 +28,6 @@ from tero.agents.domain import AgentListItem, Agent
 from tero.agents.test_cases.domain import TestSuiteRun, TestCaseResult
 from tero.api import app
 from tero.core import repos as repos_module, auth
-from tero.core.env import env # noqa: F401  # used by test files importing common
 from tero.core.api import BASE_PATH # noqa: F401  # used by test files importing common
 from tero.core.assets import solve_asset_path
 from tero.core.env import env # noqa: F401  # used by test files importing common
