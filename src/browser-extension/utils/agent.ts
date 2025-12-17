@@ -91,7 +91,9 @@ export abstract class Agent {
           yield { message: part.data };
         } else if (event === 'messageId') {
           yield { messageId: parseInt(part.data) };
-        } else {
+        } else if (event === 'heartbeat') {
+          continue;
+        } else if (part.data) {
           yield { [`${part.event}`]: JSON.parse(part.data) };
         }
       } else if (part && typeof part === "object" && "steps" in part) {
