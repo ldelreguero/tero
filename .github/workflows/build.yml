@@ -83,4 +83,5 @@ jobs:
           poetry run pyright
           cp ../sample.env ../../.env
           poetry run alembic revision
-          poetry run pytest
+          # Run pytest from it as root to allow cleanup of files created by root-owned docker containers
+          sudo -E "$(poetry env info --path)/bin/pytest"
