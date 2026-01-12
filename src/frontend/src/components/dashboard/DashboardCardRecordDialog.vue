@@ -21,7 +21,7 @@ const emit = defineEmits<{
 
 <template>
   <Dialog :visible="props.showModal" @update:visible="emit('close')" :modal="true" :draggable="false" :resizable="false" :closable="false" :close-on-escape="true" class="w-150 basic-dialog" :show-header="false" :dismissable-mask="true">
-      <div class="flex flex-col bg-white rounded-xl">
+      <div class="flex flex-col bg-surface rounded-xl">
         <div class="flex items-center gap-2 justify-between w-full p-5">
           <div class="flex flex-row gap-2 items-start flex-1 min-w-0">
             <slot name="avatar" />
@@ -43,7 +43,7 @@ const emit = defineEmits<{
         </div>
         <div class="flex flex-col gap-2 px-5 py-4 min-h-[256px]">
           <div class="animate-pulse space-y-6 flex flex-col gap-2" v-if="props.isLoading">
-            <div v-for="n in 5" :key="n" class="flex flex-col bg-gray-300 rounded animate-pulse w-full h-8">
+            <div v-for="n in 5" :key="n" class="flex flex-col bg-auxiliar-gray rounded animate-pulse w-full h-8">
             </div>
           </div>
           <slot name="details" v-else />

@@ -111,7 +111,7 @@ onMounted(() => {
             >
               <span>{{ moment(execution.executedAt).format('D MMM YYYY HH:mm') }}</span>
               <div class="flex flex-row items-center gap-4">
-                  <div class="bg-white rounded-xl px-2 py-1">
+                  <div class="bg-surface rounded-xl px-2 py-1">
                     <AgentTestcaseRunStatus
                       :passed="execution.passedTests"
                       :failed="execution.failedTests"

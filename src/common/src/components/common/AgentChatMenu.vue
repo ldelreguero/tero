@@ -65,7 +65,7 @@ defineExpose({
         <MenuItemTemplate :item="item"/>
       </template>
       <template v-if="agentTeam" #end>
-        <span class="block bg-dark-gray text-center text-white text-sm font-semibold truncate px-2 py-1 rounded-b-xl w-[calc(100%+0.5rem)] mb-[-0.25rem] ml-[-0.25rem] mr-[-0.25rem]">
+        <span class="block bg-abstracta text-center text-white text-sm font-semibold truncate px-2 py-1 rounded-b-xl w-[calc(100%+0.5rem)] mb-[-0.25rem] ml-[-0.25rem] mr-[-0.25rem]">
           {{ agentTeam }}
         </span>
       </template>

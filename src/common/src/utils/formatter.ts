@@ -32,7 +32,7 @@ const useTables = (md: MarkdownIt) => {
   const downloadButton = `
     <div class="flex mt-4">
       <button
-        class="inline-flex items-center whitespace-nowrap rounded-xl bg-white border border-auxiliar-gray px-3 py-1.5 gap-1 text-light-gray"
+        class="inline-flex items-center whitespace-nowrap rounded-xl bg-surface border border-auxiliar-gray px-3 py-1.5 gap-1 text-light-gray"
         onclick="downloadTableCSV(this)"
       >
         ${csvIcon} ${CSV_FILENAME}
@@ -59,7 +59,7 @@ const useTables = (md: MarkdownIt) => {
   md.renderer.rules.td_open = () => '<td class="break-words border border-auxiliar-gray px-4 py-2">'
   md.renderer.rules.th_open = () => '<th class="break-words border border-auxiliar-gray px-4 py-2 bg-pale !font-medium">'
   md.renderer.rules.table_close = () => '</table>'
-  md.renderer.rules.tbody_open = () => '<tbody class="divide-y divide-gray-200">'
+  md.renderer.rules.tbody_open = () => '<tbody class="divide-y divide-auxiliar-gray">'
 }
 
 const useCodeInline = (md: MarkdownIt) => {
@@ -169,7 +169,7 @@ export const renderMarkDown = (text: string, isComplete: boolean, t?: (key: stri
             <span class="font-[sora]">${copyButtonText}</span>
           </button>
         </div>
-        <code class="block p-2 bg-white border border-auxiliar-gray rounded-b-lg overflow-x-auto">`.replace(/  |\r\n|\n|\r/gm, '')
+        <code class="block p-2 bg-surface-muted border border-auxiliar-gray rounded-b-lg overflow-x-auto">`.replace(/  |\r\n|\n|\r/gm, '')
         if (hljs.getLanguage(lang)) {
           try {
             code += hljs.highlight(str, { language: lang }).value

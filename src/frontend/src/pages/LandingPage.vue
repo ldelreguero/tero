@@ -22,7 +22,7 @@ async function login() {
         <div class="flex-shrink-0">
           <Logo height="120px" class="transform -translate-y-1/5" />
         </div>
-        <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-lg w-full max-w-[450px]">
+        <div class="bg-surface rounded-2xl p-6 sm:p-8 shadow-lg w-full max-w-[450px]">
           <h1 class="mb-4">
             {{ t("welcome") }} <br/> <span class="text-primary">Tero</span>
           </h1>

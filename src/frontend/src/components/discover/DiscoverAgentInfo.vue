@@ -121,14 +121,14 @@ watch(() => [showModal, agentId],
             <div class="flex flex-row gap-2 bg-pale p-2 px-8 rounded-md items-center justify-between">
               <div class="flex flex-row gap-4 items-center">
                 <span class="text-sm font-semibold">{{ t('modelLabel') }}</span>
-                <span class="text-m p-1 px-4 rounded-md bg-white font-semibold flex flex-row gap-2 items-center">
+                <span class="text-m p-1 px-4 rounded-md bg-surface font-semibold flex flex-row gap-2 items-center">
                   <IconBrandOpenai />
                   <span>{{ currentModel?.name }}</span>
                 </span>
               </div>
               <div class="flex flex-row gap-4 items-center">
                 <span class="text-sm font-semibold">{{LlmModelType.CHAT === modelType ? t('temperatureLabel') : t('reasoningEffortLabel')}}</span>
-                <span class="text-m p-1 px-4 rounded-md bg-white font-semibold lowercase first-letter:uppercase">
+                <span class="text-m p-1 px-4 rounded-md bg-surface font-semibold lowercase first-letter:uppercase">
                   <AgentModelConfig :agent="agent" :modelType="modelType!"/>
                 </span>
               </div>

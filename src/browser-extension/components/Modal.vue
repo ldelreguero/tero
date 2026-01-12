@@ -7,9 +7,9 @@ defineProps<{ show: boolean, title: string, icon?: string }>()
 <template>
   <Transition name="modal">
     <div v-if="show"
-      class="flex absolute z-auto top-0 left-0 w-full h-full bg-gray-500/20 transition-opacity duration-300 ease-in-out rounded-tl-3xl rounded-bl-3xl">
+      class="flex absolute z-auto top-0 left-0 w-full h-full bg-content/20 transition-opacity duration-300 ease-in-out rounded-tl-3xl rounded-bl-3xl">
       <div
-        class="w-80 h-auto m-auto p-3 bg-white rounded-xl shadow-md transition-all duration-300 ease-in-out">
+        class="w-80 h-auto m-auto p-3 bg-surface rounded-xl shadow-md transition-all duration-300 ease-in-out">
         <div class="modal-header flex flex-row">
           <img :src="icon" v-if="icon" />
           <h2 class="font-medium !text-current self-center !text-xl">{{ title }}</h2>

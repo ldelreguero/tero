@@ -179,7 +179,7 @@ const showUserInfo = async (user: UserImpactItem) => {
                 </template>
             </Column>
             <template #empty>
-                <div class="p-4 text-center text-gray-500">
+                <div class="p-4 text-center text-content-muted">
                     {{ t('noUsersFound') }}
                 </div>
             </template>
@@ -250,7 +250,7 @@ const showUserInfo = async (user: UserImpactItem) => {
                         </template>
                     </Column>
                     <template #empty>
-                        <div class="p-4 text-center text-gray-500">
+                        <div class="p-4 text-center text-content-muted">
                         {{ t('noAgentsFound') }}
                         </div>
                     </template>

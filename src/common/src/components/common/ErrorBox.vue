@@ -45,7 +45,7 @@ watch(
 
 <template>
   <Animate :effect="AnimationEffect.QUICK_SLIDE_UP" v-if="showError && error?.title && error?.message">
-    <div ref="errorBoxRef" class="flex items-center px-3 py-2 my-3 border border-error-alt rounded-2xl whitespace-pre-line relative bg-white shadow-md">
+    <div ref="errorBoxRef" class="flex items-center px-3 py-2 my-3 border border-error-alt rounded-2xl whitespace-pre-line relative bg-surface shadow-md">
       <button @click="close" class="absolute top-2 right-2">
         <IconX class="w-5 h-5 hover:text-error-alt" />
       </button>

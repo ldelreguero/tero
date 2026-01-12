@@ -28,7 +28,7 @@
           </div>
         </div>
         <!-- Chat input skeleton -->
-        <div class="flex flex-col gap-1 p-3 relative rounded-xl border border-auxiliar-gray bg-white shadow-sm">
+        <div class="flex flex-col gap-1 p-3 relative rounded-xl border border-auxiliar-gray bg-surface shadow-sm">
           <div class="absolute top-[-.85rem] right-20 h-6 w-16 bg-auxiliar-gray rounded-full"></div>
           <div class="h-20 bg-auxiliar-gray rounded w-full"></div>
         </div>

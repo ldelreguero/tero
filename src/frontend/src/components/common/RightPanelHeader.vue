@@ -11,7 +11,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="w-full h-[74px] bg-[url('@/assets/images/banner.webp')] bg-cover bg-center bg-blend-overlay rounded-t-lg shadow-md flex justify-between lg:grid grid-cols-3 items-center px-8 py-2">
+  <div class="w-full h-[74px] bg-[url('@/assets/images/banner.webp')] bg-cover bg-center bg-blend-overlay dark:bg-surface/70 rounded-t-lg shadow-md flex justify-between lg:grid grid-cols-3 items-center px-8 py-2">
     <div>
       <Logo />
     </div>

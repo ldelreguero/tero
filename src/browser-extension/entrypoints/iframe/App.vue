@@ -291,7 +291,7 @@ const onNewChat = async () => {
 }
 
 const sidebarClasses = computed(() => [
-  'fixed flex flex-col bg-white border border-gray-300',
+  'fixed flex flex-col bg-surface border border-auxiliar-gray',
   isMinimized.value
     ? 'bottom-4 right-4 rounded-full shadow-lg cursor-pointer hover:shadow-xl transition-shadow'
     : 'm-2 -left-2 w-full h-[calc(100%-16px)] rounded-tl-3xl rounded-bl-3xl'
@@ -311,7 +311,7 @@ const sidebarClasses = computed(() => [
 <style scoped>
 #sidebar ::-webkit-scrollbar {
   width: 7px;
-  background-color: #ccc;
+  background-color: var(--color-auxiliar-gray);
   border-radius: 3px;
 }
 

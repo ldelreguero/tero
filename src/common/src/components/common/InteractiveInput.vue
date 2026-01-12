@@ -126,13 +126,13 @@ const commonInputClasses = computed(() => [
   inputIsAIGenerating.value && 'animate-glowing',
   isOverMaxLength.value && 'pr-10',
   hasError() && 'outline-error-alt focus:outline-error-alt ring-1 ring-error-alt',
-  props.variant === 'light' && 'bg-white outline-pale focus:outline-none focus:ring-0 focus:border-none',
+  props.variant === 'light' && 'bg-surface outline-pale focus:outline-none focus:ring-0 focus:border-none',
   isNumber() && '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
   props.disabled && '!bg-pale !text-light-gray opacity-60'
 ].filter(Boolean));
 
 const commonIconClasses = computed(() => [
-  'text-light-gray hover:text-black cursor-pointer absolute',
+  'text-light-gray hover:text-dark-gray cursor-pointer absolute',
   props.disabled && '!text-light-gray opacity-60'
 ].filter(Boolean));
 

@@ -11,13 +11,18 @@
 @theme {
   --color-primary: #754bde;
   --color-primary-pastel: #b8a7e9;
-  --color-dark-gray: #1f1f1f;
-  --color-pale: #f4f4f4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f4f4;
+  --color-content: #1f1f1f;
+  --color-content-muted: #737475;
+
+  --color-dark-gray: var(--color-content);
+  --color-pale: var(--color-surface-muted);
   --color-abstracta: #3c1464;
   --color-abstracta-lighter: #d3c0ff;
   --color-abstracta-lighter-pastel: #e9e0ff;
   --color-auxiliar-gray: #d9d9d9;
-  --color-light-gray: #737475;
+  --color-light-gray: var(--color-content-muted);
   --color-lighter-gray: #ACACAC;
   --color-warn: #F9BC46;
   --color-warn-lighter: #FDEBC7;
@@ -34,20 +39,39 @@
   --animate-magnify-search: magnify-search 1s ease-in-out infinite;
   --animate-fade-in: fade-in 0.4s ease-out forwards;
   --shadow-light: 0px 2px 5px 0px rgba(0,0,0,0.07);
+  --shadow-gradient-surface: rgba(255, 255, 255, 0.8);
   --border: 1px solid #ccc;
 }
 
 html:root,
 :root {
-  --p-tabs-tab-color: var(--color-dark-gray);
-  --p-text-color: var(--color-dark-gray);
-  --p-text-hover-color: var(--color-dark-gray);
-  --p-text-muted-color: var(--color-light-gray);
-  --p-text-hover-muted-color: var(--color-light-gray);
-  --p-primary-color: var(--color-dark-gray);
-  --p-form-field-color: var(--color-dark-gray);
-  --p-highlight-color: var(--color-dark-gray);
-  --p-highlight-focus-color: var(--color-dark-gray);
+  --p-tabs-tab-color: var(--color-content);
+  --p-text-color: var(--color-content);
+  --p-text-hover-color: var(--color-content);
+  --p-text-muted-color: var(--color-content-muted);
+  --p-text-hover-muted-color: var(--color-content-muted);
+  --p-primary-color: var(--color-content);
+  --p-form-field-color: var(--color-content);
+  --p-highlight-color: var(--color-content);
+  --p-highlight-focus-color: var(--color-content);
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  --color-surface: #121212;
+  --color-surface-muted: #1b1b1b;
+  --color-content: #f4f4f4;
+  --color-content-muted: #b5b5b5;
+
+  --color-auxiliar-gray: #2d2d2d;
+  --color-lighter-gray: #3a3a3a;
+
+  --shadow-gradient-surface: rgba(18, 18, 18, 0.8);
 }
 
 @keyframes wiggle {
@@ -118,6 +142,10 @@ html:root,
   html {
     font-family: 'Sora';
   }
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-content);
+  }
   button,
   [role='button'] {
     cursor: pointer;
@@ -125,6 +153,12 @@ html:root,
   button:disabled,
   [role='button']:disabled {
     cursor: default;
+  }
+}
+
+@layer utilities {
+  .shadow-gradient-surface {
+    box-shadow: 0px 170px 35px 200px var(--shadow-gradient-surface);
   }
 }
 
@@ -185,7 +219,7 @@ a {
 }
 
 .p-tooltip .p-tooltip-text {
-  @apply !bg-white !text-abstracta !border !text-xs !p-1;
+  @apply !bg-surface !text-content !border !text-xs !p-1;
 }
 
 .p-inputtext.borderless-input {
@@ -222,8 +256,21 @@ a {
   @apply !text-light-gray;
 }
 
+.p-inputtext,
+.p-textarea {
+  @apply !bg-transparent !text-content !border-auxiliar-gray;
+}
+
 .p-menu {
-  @apply !rounded-xl !shadow-lg !border-auxiliar-gray !p-1;
+  @apply !rounded-xl !shadow-lg !border-auxiliar-gray !p-1 !bg-surface !text-content;
+}
+
+.p-popover {
+  @apply !bg-surface !text-content !border-auxiliar-gray;
+}
+
+.p-popover-content {
+  @apply !bg-surface !text-content;
 }
 
 .p-menu-item-content {
@@ -232,6 +279,107 @@ a {
 
 .p-menu-item-content:not(:focus) {
   @apply !bg-transparent hover:!bg-pale;
+}
+
+.p-menu-item-link,
+.p-menu-item-label {
+  @apply !text-content;
+}
+
+.p-menu-separator {
+  @apply !border-auxiliar-gray;
+}
+
+.p-select {
+  @apply !bg-transparent !border-auxiliar-gray;
+}
+
+/* Dark mode: Jira/MCP monochrome SVGs rendered as <img> need inversion */
+html.dark img.tool-menu-icon[data-tool-icon='jira'],
+html.dark img.tool-menu-icon[data-tool-icon='mcp'] {
+  filter: invert(1) brightness(1.05);
+}
+
+.p-select-label {
+  @apply !text-content;
+}
+
+.p-select-dropdown {
+  @apply !text-light-gray;
+}
+
+.p-select-overlay {
+  @apply !bg-surface !border-auxiliar-gray;
+}
+
+.p-select-list {
+  @apply !bg-transparent;
+}
+
+.p-select-option {
+  @apply !text-content;
+}
+
+.p-select-option:not(.p-select-option-selected):hover {
+  @apply !bg-pale;
+}
+
+.p-select-option.p-select-option-selected {
+  @apply !bg-pale;
+}
+
+.p-tabs,
+.p-tablist,
+.p-tablist-content,
+.p-tablist-viewport,
+.p-tablist-tab-list {
+  @apply !bg-transparent;
+}
+
+.p-tabpanels,
+.p-tabpanel {
+  @apply !bg-transparent !text-content;
+}
+
+.p-tab {
+  @apply !bg-transparent !text-light-gray;
+}
+
+.p-tab.p-tab-active,
+.p-tab.p-tab-active * {
+  @apply !text-content;
+}
+
+.p-datatable,
+.p-datatable-header,
+.p-datatable-footer,
+.p-datatable-table-container,
+.p-datatable-wrapper,
+.p-datatable-table {
+  @apply !bg-transparent;
+}
+
+.p-datatable-thead > tr > th {
+  @apply !bg-transparent !text-light-gray !border-auxiliar-gray;
+}
+
+.p-datatable-tbody > tr {
+  @apply !bg-transparent;
+}
+
+.p-datatable-tbody > tr:hover {
+  @apply !bg-pale;
+}
+
+.p-datatable-tbody > tr > td {
+  @apply !border-auxiliar-gray !bg-transparent !text-content;
+}
+
+.p-dialog,
+.p-dialog-header,
+.p-dialog-content,
+.p-dialog-footer {
+  @apply !bg-surface !text-content;
 }
 
 .form-field {
@@ -244,7 +392,7 @@ a {
 
 .form-field input,
 .form-field textarea {
-  @apply text-sm !border-(--color-auxiliar-gray) rounded-xl;
+  @apply text-sm !border-(--color-auxiliar-gray) rounded-xl bg-transparent text-content placeholder:text-light-gray;
 }
 
 .form-field input:focus,

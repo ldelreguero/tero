@@ -24,7 +24,7 @@ const isInSidebar = computed(() => {
 
 </script>
 <template>
-    <div class="bg-white h-full w-full flex flex-col rounded-2xl border border-auxiliar-gray shadow-sm" :class="{ 'px-4': !hasBgCover() }">
+    <div class="bg-surface h-full w-full flex flex-col rounded-2xl border border-auxiliar-gray shadow-sm" :class="{ 'px-4': !hasBgCover() }">
         <div class="flex flex-col h-full">
             <div
                 class="border-b border-auxiliar-gray"

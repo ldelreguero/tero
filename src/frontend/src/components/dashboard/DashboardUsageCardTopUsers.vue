@@ -174,8 +174,8 @@ const showUserInfo = async (user: UserUsageItem) => {
                 </template>
             </Column>
             <template #empty>
-                <div class="p-4 text-center text-gray-500">
-                    {{ t('noUsersFound') }}
+                <div class="p-4 text-center text-content-muted">
+                        {{ t('noUsersFound') }}
                 </div>
             </template>
         </DataTable>
@@ -234,8 +234,8 @@ const showUserInfo = async (user: UserUsageItem) => {
                         </template>
                     </Column>
                     <template #empty>
-                        <div class="p-4 text-center text-gray-500">
-                        {{ t('noAgentsFound') }}
+                        <div class="p-4 text-center text-content-muted">
+                                {{ t('noAgentsFound') }}
                         </div>
                     </template>
                 </DataTable>

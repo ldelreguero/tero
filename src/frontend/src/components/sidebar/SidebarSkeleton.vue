@@ -29,7 +29,7 @@ defineProps<{
         </div>
       </div>
       <div v-if="!isCollapsed" class="mt-5">
-        <div class="sticky top-0 bg-white z-10">
+        <div class="sticky top-0 bg-surface z-10">
           <div class="flex justify-between items-center">
             <div class="h-6 bg-auxiliar-gray rounded animate-pulse w-24"></div>
           </div>

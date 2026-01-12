@@ -176,7 +176,7 @@ const onSettingsChange = () => {
 }
 
 .selected-option {
-  background-color: #f4f4f4;
+  background-color: var(--color-surface-muted);
 }
 
 :deep(.p-select-overlay) {
@@ -193,6 +193,6 @@ const onSettingsChange = () => {
 
 :deep(.p-select-footer) {
   flex-shrink: 0!important;
-  border-top: 1px solid #e5e7eb!important;
+  border-top: 1px solid var(--color-auxiliar-gray)!important;
 }
 </style>

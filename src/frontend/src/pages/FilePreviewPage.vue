@@ -62,7 +62,7 @@ const backgroundClasses = computed(() => {
     return 'border-l-[.2px] border-auxiliar-gray'
   }
   if (browserIsChrome.value) {
-    return 'border-l-10 border-l-[#626262]'
+    return 'border-l-10 border-l-auxiliar-gray'
   }
   return undefined
 })
@@ -70,9 +70,9 @@ const backgroundClasses = computed(() => {
 const headerClasses = computed(() => {
   if (!fileIsPdf.value) return
   if (browserIsChrome.value) {
-    return 'bg-[#3c3c3c] px-4 py-4 border-l-10 border-l-[#626262] text-white'
+    return 'bg-surface-muted px-4 py-4 border-l-10 border-l-auxiliar-gray text-content'
   } else if (browserIsFirefox.value) {
-    return 'bg-[#f9f9fa] py-1 border-b-1 border-b-[#b8b8b8]'
+    return 'bg-surface-muted py-1 border-b-1 border-b-auxiliar-gray'
   } else{
     return undefined
   }
@@ -212,7 +212,7 @@ const awaitFileProcessingCompletes = async (toolFile: DocToolFile) => {
       </div>
     </div>
     <template v-else>
-      <div class="bg-white border-b-[.2px] border-auxiliar-gray flex items-center justify-between px-4 py-3 flex-shrink-0">
+      <div class="bg-surface border-b-[.2px] border-auxiliar-gray flex items-center justify-between px-4 py-3 flex-shrink-0">
         <p>{{ fileName }}</p>
         <div class="flex items-center gap-2">
           <SimpleButton v-if="fileIsPdf && canReprocess" @click="reprocess" :disabled="reprocessing || quotaExceeded" v-tooltip.bottom="!reprocessing && (quotaExceeded ? quotaExceededMessage : lastUsedProcessor == FileProcessor.BASIC ? t('reprocessWithAITooltip') : t('reprocessWithBasicTooltip'))">
@@ -300,7 +300,7 @@ const awaitFileProcessingCompletes = async (toolFile: DocToolFile) => {
     "reprocessWithAITooltip": "Consume más presupuesto",
     "quotaExceeded": "Ha alcanzado la cuota de uso mensual. Contacte a {support} para aumentar su cuota mensual o espere al próximo mes.",
     "filePreviewNotAvailable": "Vista previa de archivo no disponible",
-    "filePreviewDescription": Puedes descargar el archivo para verlo en una aplicación compatible.",
+    "filePreviewDescription": "Puedes descargar el archivo para verlo en una aplicación compatible.",
     "downloadFile": "Descargar",
     "copyCodeButton": "Copiar código",
     "copiedMessage": "Copiado!",
