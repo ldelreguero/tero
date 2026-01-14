@@ -18,7 +18,7 @@ from tero.agents.test_cases.domain import TestCaseResultStatus, TestSuiteRun, Te
 from tero.ai_models.domain import LlmTemperature, ReasoningEffort
 
 
-EVALUATOR_MODEL_ID = "gpt-5-nano"
+EVALUATOR_MODEL_ID = "gpt-5-mini"
 EVALUATOR_TEMPERATURE = LlmTemperature.NEUTRAL
 EVALUATOR_REASONING_EFFORT = ReasoningEffort.MEDIUM
 
@@ -147,7 +147,7 @@ async def test_run_test_case_with_specific_evaluator(client: AsyncClient, last_m
         model_id=EVALUATOR_MODEL_ID,
         temperature=EVALUATOR_TEMPERATURE,
         reasoning_effort=EVALUATOR_REASONING_EFFORT,
-        prompt="Always fail the evaluation"
+        prompt="Always fail the evaluation. Don't include any reason."
     )
     resp = await _update_test_case_evaluator(client, AGENT_ID, TEST_CASE_1_THREAD_ID, test_case_evaluator)
     _assert_evaluator_response_matches(resp, test_case_evaluator)

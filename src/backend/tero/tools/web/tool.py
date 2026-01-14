@@ -38,8 +38,7 @@ class WebSearchLangchainTool(BaseTool):
     description: str = "Searches the web for the given query"
     args_schema: Optional[ArgsSchema] = WebSearchToolArgs
     callbacks: Callbacks = [StatusUpdateCallbackHandler(name, description=description,
-        response_parser=parse_result_search, 
-        params_parser=lambda params: ast.literal_eval(params).get("query"))]
+        response_parser=parse_result_search)]
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError("Synchronous run not implemented.")
@@ -105,8 +104,7 @@ class WebExtractLangchainTool(BaseTool):
     description: str = "Extracts text from the given URLs"
     args_schema: Optional[ArgsSchema] = WebExtractToolArgs
     callbacks: Callbacks = [StatusUpdateCallbackHandler(name, description=description,
-        response_parser=parse_result_extract, 
-        params_parser=lambda params: ", ".join(ast.literal_eval(params).get("urls")))]
+        response_parser=parse_result_extract)]
 
     def __init__(self, max_extract_length: int):
         super().__init__()

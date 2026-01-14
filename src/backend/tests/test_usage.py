@@ -5,10 +5,12 @@ from httpx import AsyncClient
 
 from .common import *
 
+from tero.agents.domain import AgentListItem
 from tero.external_agents.domain import PublicExternalAgent
 from tero.teams.domain import Role, Team, MY_TEAM_ID
 from tero.usage.api import IMPACT_PATH, USAGE_PATH
 from tero.usage.domain import AgentImpactItem, UserImpactItem, ImpactSummary, UsageSummary, AgentUsageItem, UserUsageItem, PRIVATE_AGENT_ID
+from tero.users.domain import UserListItem
 
 
 async def test_user_budget(client: AsyncClient):

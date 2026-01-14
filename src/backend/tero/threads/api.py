@@ -13,7 +13,7 @@ from sse_starlette.event import ServerSentEvent
 
 from ..agents.repos import AgentRepository
 from ..ai_models import ai_factory
-from ..core.api import BASE_PATH
+from ..core.api import BASE_PATH, with_heartbeat
 from ..core.auth import get_current_user
 from ..core.domain import CamelCaseModel
 from ..core.env import env
@@ -169,7 +169,7 @@ async def add_message(thread_id: int, request: Request, user: Annotated[User, De
         user_message = await repo.refresh_with_files(user_message)
 
         return StreamingResponse(
-            _agent_response(user_message, thread, user.id, db, is_in_agent_edition),
+            with_heartbeat(_agent_response(user_message, thread, user.id, db, is_in_agent_edition)),
             media_type="text/event-stream",
         )
     except ToolOAuthRequest as e:

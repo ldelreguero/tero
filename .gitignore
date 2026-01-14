@@ -372,3 +372,4 @@ pyrightconfig.json
 components.d.ts
 **/.vscode/*
 .wxt
+var

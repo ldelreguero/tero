@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { useI18n } from 'vue-i18n'
 import { onMounted, ref, watch, computed } from 'vue'
-import { loadUserProfile } from '@/composables/useUserProfile'
-import { Role, Team, MY_TEAM_ID, GLOBAL_TEAM_ID, TeamRoleStatus, UserProfile } from '@/services/api'
-import { useErrorHandler } from '@/composables/useErrorHandler'
 import { IconSparkles, IconUsers, IconSettings, IconMessages } from '@tabler/icons-vue'
+import { Role, Team, MY_TEAM_ID, GLOBAL_TEAM_ID, TeamRoleStatus, UserProfile } from '@/services/api'
+import { loadUserProfile } from '@/composables/useUserProfile'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useSelectedTeam } from '@/composables/useSelectedTeam'
 import DashboardImpact from '@/components/dashboard/DashboardImpact.vue'
 import DashboardUsers from '@/components/dashboard/DashboardUsers.vue'

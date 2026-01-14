@@ -2,10 +2,11 @@ import abc
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 import json
-from typing import Any, List, Optional, cast, Dict, Callable
+from typing import Any, List, Optional, cast, Callable
+from uuid import UUID
 
 import jsonschema
-from langchain.tools import BaseTool
+from langchain.tools import BaseTool, ToolRuntime
 from langchain_core.callbacks import AsyncCallbackHandler
 from langgraph.config import get_stream_writer
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -47,25 +48,34 @@ def _fix_core_schema_references(ret: dict) -> dict:
 
 class StatusUpdateCallbackHandler(AsyncCallbackHandler):
     def __init__(self, tool_id: str, description: Optional[str] = "", 
-                response_parser: Optional[Callable[[Any], List[str]]] = None, 
-                params_parser: Optional[Callable[[Any], str]] = None):
+                response_parser: Optional[Callable[[Any], List[str]]] = None):
         self.tool_id = tool_id
         self.description = description
         self.response_parser = response_parser
-        self.params_parser = params_parser
 
     async def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+        self,
+        serialized: dict[str, Any],
+        input_str: str,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        inputs: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> None:
-        params = self.params_parser(input_str) if self.params_parser else input_str
         get_stream_writer()(
             AgentActionEvent(
                 action=AgentAction.EXECUTING_TOOL,
                 tool_name=self.tool_id,
-                args=params,
+                args=self._cleanup_inputs(inputs),
                 description=self.description,
             )
         )
+
+    def _cleanup_inputs(self, inputs: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+        return { key: value for key, value in inputs.items() if not isinstance(value, ToolRuntime) } if inputs else None
 
     async def on_tool_end(self, output: Any, **kwargs: Any) -> None:
         result = self.response_parser(output.content) if self.response_parser else output.content[0:200] + "..."

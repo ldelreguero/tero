@@ -6,10 +6,12 @@ from .common import *
 
 from tero.agents.api import AGENTS_PATH, AGENT_PIN_PATH, AGENT_PATH, AGENT_TOOL_PATH, AGENT_TOOLS_PATH, \
     AGENT_TOOL_FILE_PATH
-from tero.agents.domain import PublicAgent, AgentToolConfig, AutomaticAgentField, LlmTemperature, ReasoningEffort, AgentUpdate
+from tero.agents.domain import PublicAgent, AgentToolConfig, AutomaticAgentField, LlmTemperature, ReasoningEffort, AgentUpdate, AgentListItem
 from tero.agents.prompts.api import AGENT_PROMPTS_PATH
 from tero.agents.prompts.domain import AgentPromptPublic, AgentPrompt
 from tero.files.domain import FileMetadata, FileStatus, FileProcessor
+from tero.teams.domain import Team
+from tero.tools.docs import DOCS_TOOL_ID
 from tero.users.domain import UserListItem
 
 

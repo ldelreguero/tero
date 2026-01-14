@@ -149,7 +149,7 @@ defineExpose({
 {
     "en": {
         "userName": "User name",
-        "userNamePlaceholder": "Enter user name",
+        "userNamePlaceholder": "Enter user email",
         "noUsersFound": "No users found",
         "role": "Role",
         "teamOwner": "Leader",
@@ -159,7 +159,7 @@ defineExpose({
     },
     "es": {
         "userName": "Nombre de usuario",
-        "userNamePlaceholder": "Introduzca nombre de usuario",
+        "userNamePlaceholder": "Introduzca email de usuario",
         "noUsersFound": "No se encontraron usuarios",
         "role": "Rol",
         "teamOwner": "Líder",

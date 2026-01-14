@@ -3,6 +3,7 @@ from typing import cast
 from zipfile import ZipFile
 
 import aiofiles
+from sqlmodel import col
 
 from .common import *
 
@@ -15,6 +16,7 @@ from tero.agents.test_cases.domain import NewTestCaseMessage, PublicTestCase
 from tero.files.domain import FileMetadata, FileStatus, File, FileProcessor
 from tero.threads.domain import ThreadMessageOrigin, Thread, ThreadMessagePublic
 from tero.tools.browser import BROWSER_TOOL_ID
+from tero.tools.docs import DOCS_TOOL_ID
 from tero.tools.web import WEB_TOOL_ID
 from tero.users.domain import UserListItem
 

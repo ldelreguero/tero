@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sse_starlette.event import ServerSentEvent
 
+from ...core.api import with_heartbeat
 from ...core.auth import get_current_user
 from ...core.repos import get_db
 from ...users.domain import User
@@ -227,7 +228,7 @@ async def stream_test_suite_updates(
             stop_event.set()
 
     return StreamingResponse(
-        event_generator(),
+        with_heartbeat(event_generator()),
         media_type="text/event-stream"
     )
 

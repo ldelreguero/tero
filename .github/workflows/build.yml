@@ -52,9 +52,12 @@ jobs:
           pnpm run zip
 
   test-backend:
+    environment: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - name: Install poetry
         run: pipx install poetry
       - uses: actions/setup-python@v5
@@ -64,27 +67,21 @@ jobs:
           cache-dependency-path: 'src/backend/poetry.lock'
       - name: Test
         working-directory: src/backend
+        env:
+          AZURE_ENDPOINTS: ${{ secrets.AZURE_ENDPOINTS }}
+          AZURE_API_KEYS: ${{ secrets.AZURE_API_KEYS }}
+          AZURE_MODEL_DEPLOYMENTS: ${{ secrets.AZURE_MODEL_DEPLOYMENTS }}
+          AZURE_DOC_INTELLIGENCE_ENDPOINT: ${{ secrets.AZURE_DOC_INTELLIGENCE_ENDPOINT }}
+          AZURE_DOC_INTELLIGENCE_KEY: ${{ secrets.AZURE_DOC_INTELLIGENCE_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SECRET_ENCRYPTION_KEY: ${{ secrets.SECRET_ENCRYPTION_KEY }}
+          WEB_TOOL_TAVILY_API_KEY: ${{ secrets.WEB_TOOL_TAVILY_API_KEY }}
         run: |
           poetry install
           poetry run pyright
           cp ../sample.env ../../.env
           poetry run alembic revision
-
-  publish-gh-pages:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 23
-          cache: 'pnpm'
-          cache-dependency-path: 'docs/pnpm-lock.yaml'
-      - name: Publish
-        run: .github/gh-pages-deploy.sh
-        env:
-          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Run pytest from it as root to allow cleanup of files created by root-owned docker containers
+          sudo -E "$(poetry env info --path)/bin/pytest"

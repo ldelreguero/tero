@@ -524,7 +524,7 @@ class DocsStatusUpdateCallbackHandler(AsyncCallbackHandler):
                 action=AgentAction.EXECUTING_TOOL,
                 tool_name=self.tool_id,
                 step=DocsExecutionStep.RETRIEVING,
-                args=query,
+                args={"query": query},
                 description=self.description,
             )
         )

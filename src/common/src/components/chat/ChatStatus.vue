@@ -67,8 +67,8 @@ watch(() => props.isComplete, (newIsComplete) => {
   <div v-if="showStatus" class="status-container mb-2">
     <div class="overflow-hidden border-b border-auxiliar-gray">
       <button @click="toggleExpanded" class="w-full flex items-center justify-between py-2">
-        <div v-if="!isComplete" class="flex items-center gap-2">
-          <div class="w-3 h-3 border-2 border-auxiliar-gray border-t-transparent rounded-full animate-spin"></div>
+        <div v-if="!isComplete" class="flex items-center gap-2 w-full text-left">
+          <div class="w-3 h-3 p-1 border-2 border-auxiliar-gray border-t-transparent rounded-full animate-spin"></div>
           <span class="text-sm text-light-gray" v-html="currentStatusText"></span>
         </div>
         <div v-else class="flex items-center gap-2">

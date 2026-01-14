@@ -181,7 +181,7 @@ const saveToolConfig = async () => {
     validateToolConfig()
     let ret = new AgentToolConfig(props.toolConfig.toolId, mutableConfig)
     // avoid saving tool when requires files and none have been uploaded
-    if (savedConfig.value !== mutableConfig && !(Object.values(toolProperties.value).some(isFileProperty) && !savedConfig.value)) {
+    if (savedConfig.value !== mutableConfig && !(Object.values(toolProperties.value).some(prop => isFileProperty(prop) || isFileArrayProperty(prop)) && !savedConfig.value)) {
       partialSave = true
       ret = await handleOAuthRequestsIn(async () => {
         // resetting this flag since we want to allow retry saving tool config to re open oauth popup, or allow cancelling oauth
@@ -225,10 +225,10 @@ const validateToolConfig = () => {
 }
 
 const removeFileProperties = (schema: JSONSchema7) : JSONSchema7 => {
-  const fileProperties = Object.entries(schema.properties ?? {}).filter(([_, value]) => isFileProperty(value))
+  const fileProperties = Object.entries(schema.properties ?? {}).filter(([_, value]) => isFileProperty(value) || isFileArrayProperty(value))
   return {
     ...schema,
-    properties: Object.fromEntries(Object.entries(schema.properties ?? {}).filter(([_, value]) => !isFileProperty(value))),
+    properties: Object.fromEntries(Object.entries(schema.properties ?? {}).filter(([_, value]) => !isFileProperty(value) && !isFileArrayProperty(value))),
     required: schema.required?.filter((property) => !fileProperties.some(([key, _]) => key === property))
   }
 }
