@@ -120,7 +120,7 @@ watch(isSidebarCollapsed, (newVal) => {
         <SidebarDiscoverItem />
       </div>
 
-      <div v-if="!isSidebarCollapsed" class="sticky top-0 bg-white z-10 p-2">
+      <div v-if="!isSidebarCollapsed" class="sticky top-0 bg-surface z-10 p-2">
         <div class="flex items-center gap-1 text-sm">
           <button @click="agentsCollapsed = !agentsCollapsed">
             <component :is="agentsCollapsed ? IconChevronDown : IconChevronUp" class="w-5 h-5" />
