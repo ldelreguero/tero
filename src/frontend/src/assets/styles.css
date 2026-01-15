@@ -203,8 +203,25 @@
 
 /* Dark mode: PrimeVue tab panels should not paint white */
 .p-tabpanels,
-.p-tabpanel {
+.p-tabpanel,
+.p-tablist,
+.p-tablist-content,
+.p-tablist-tab-list {
   @apply !bg-transparent !text-content;
+}
+
+.p-tablist-nav-button {
+  @apply !hidden;
+}
+
+.p-tablist-content,
+.p-tablist-viewport {
+  @apply !bg-transparent !shadow-none !border-none;
+}
+
+.p-tablist-content::before,
+.p-tablist-content::after {
+  @apply !hidden;
 }
 
 .p-datatable-header-cell,
