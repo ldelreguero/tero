@@ -168,7 +168,7 @@ class WebTool(AgentTool):
     description: str = "Provides web search and web extraction capabilities."
     config_schema: dict = load_schema(__file__)
 
-    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]) -> Optional[dict]:
+    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]):
         pass
 
     async def teardown(self):

@@ -130,7 +130,7 @@ const showUserInfo = async (user: UserImpactItem) => {
 
 <template>
     <div v-if="loading" class="w-full h-full">
-        <div class="bg-pale rounded-lg p-4 animate-pulse">
+        <div class="bg-surface-muted rounded-lg p-4 animate-pulse">
             <div class="h-5 bg-auxiliar-gray rounded w-32 mb-6"></div>
             <div class="space-y-4">
                 <div v-for="i in pageSize" :key="i" class="flex justify-between items-center py-2">
@@ -200,7 +200,7 @@ const showUserInfo = async (user: UserImpactItem) => {
         @close="showUserInfoModal = false" 
         @load-more-data="handleLoadMoreAgents">
             <template #summary>
-                <div class="flex items-center gap-1 pr-4 border-r-1 border-auxiliar-gray" >
+                <div class="flex items-center gap-1 pr-4 border-r-1" >
                     <DashboardTableDataComparisonCell 
                         :previous-value="selectedUser!.previousMinutesSaved /60" 
                         :current-value="selectedUser!.minutesSaved /60" 

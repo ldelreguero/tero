@@ -31,7 +31,7 @@ async def test_import_exported_minimal_agent(users: List[UserListItem], client: 
     assert_response(resp, PublicAgent(
         id=target_agent_id, name=f"Agent #{source_agent_id}", description="", last_update=CURRENT_TIME, user_id=USER_ID,
         model_id=cast(str, env.agent_default_model), system_prompt=DEFAULT_SYSTEM_PROMPT, temperature=LlmTemperature.NEUTRAL, reasoning_effort=ReasoningEffort.LOW, 
-        icon_bg_color=None, icon=None, can_edit=True, user=users[0]))
+        icon=None, can_edit=True, user=users[0]))
 
 
 async def _create_agent(client: AsyncClient) -> int:
@@ -152,7 +152,7 @@ async def _assert_imported_agent(agent_id: int, agent_update: AgentUpdate, promp
         id=agent_id, name=agent_update.name, description=agent_update.description, last_update=CURRENT_TIME, 
         user_id=USER_ID, model_id=cast(str, agent_update.model_id), system_prompt=cast(str, agent_update.system_prompt), 
         temperature=LlmTemperature.NEUTRAL,  reasoning_effort=cast(ReasoningEffort, agent_update.reasoning_effort), 
-        icon_bg_color=None, icon=agent_update.icon, can_edit=True, user=users[0]))
+        icon=agent_update.icon, can_edit=True, user=users[0]))
 
     agent_prompts = await _find_agent_prompts(agent_id, client)
     expected_prompts = [

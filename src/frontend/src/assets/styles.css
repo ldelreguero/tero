@@ -25,7 +25,7 @@
 }
 
 .p-select {
-  @apply !rounded-xl !font-medium !border-auxiliar-gray;
+  @apply !rounded-xl !font-medium;
 }
 
 .p-select-label {
@@ -33,7 +33,7 @@
 }
 
 .p-select-dropdown {
-  @apply !text-light-gray;
+  @apply !text-content-muted;
 }
 
 .p-select.p-focus {
@@ -45,19 +45,19 @@
 }
 
 .p-select-option.p-select-option-selected {
-  @apply !bg-pale !font-medium;
+  @apply !bg-surface-muted !font-medium;
 }
 
 .p-select-option.p-focus {
-  @apply !bg-pale/50;
+  @apply !bg-surface-muted/50;
 }
 
 .p-select-option.p-focus:not(.p-select-option-selected) {
-  @apply !bg-pale/50 !border-1 !border-pale;
+  @apply !bg-surface-muted/50 !border-1 !border-surface-muted;
 }
 
 .p-selectbutton {
-  @apply !bg-surface !rounded-xl !border !border-auxiliar-gray p-1;
+  @apply !bg-surface !rounded-xl !border p-1;
 }
 
 .p-togglebutton {
@@ -65,7 +65,7 @@
 }
 
 .p-togglebutton-label {
-  @apply text-light-gray;
+  @apply text-content-muted;
 }
 
 .p-togglebutton-checked .p-togglebutton-content {
@@ -77,11 +77,15 @@
 }
 
 .p-toggleswitch-handle {
-  @apply !bg-surface !border-auxiliar-gray !border;
+  @apply !bg-surface !border;
+}
+
+html.dark .p-toggleswitch:not(.p-toggleswitch-checked) .p-toggleswitch-handle {
+  @apply !bg-primary;
 }
 
 .p-toggleswitch-slider {
-  @apply !bg-pale !border-auxiliar-gray !border;
+  @apply !bg-surface-muted !border;
 }
 
 .p-toggleswitch-checked .p-toggleswitch-slider {
@@ -89,15 +93,15 @@
 }
 
 .p-menu-separator {
-  @apply !border-t !border-pale mb-[2px];
+  @apply !border-t !border-surface-muted mb-[2px];
 }
 
 .p-popover:before {
-  @apply !border-b-auxiliar-gray;
+  @apply !border-b;
 }
 
 .p-popover {
-  @apply !border-auxiliar-gray;
+  @apply !border;
 }
 
 .p-popover-content {
@@ -105,25 +109,25 @@
 }
 
 .p-autocomplete-list-container .p-autocomplete-option.p-autocomplete-option-selected {
-  @apply !bg-pale !font-medium;
+  @apply !bg-surface-muted !font-medium;
 }
 
 .p-autocomplete-list-container .p-autocomplete-option.p-focus {
-  @apply !bg-pale/50;
+  @apply !bg-surface-muted/50;
 }
 
 .p-autocomplete-list-container .p-autocomplete-option.p-focus:not(.p-autocomplete-option-selected) {
-  @apply !bg-pale/50;
+  @apply !bg-surface-muted/50;
 }
 
 .p-autocomplete .p-inputtext,
 .p-autocomplete .p-autocomplete-dropdown {
-  @apply bg-transparent border-auxiliar-gray;
+  @apply bg-transparent border-border;
 }
 
 .p-autocomplete .p-inputtext:hover,
 .p-autocomplete .p-autocomplete-dropdown:hover {
-  @apply !bg-transparent border-auxiliar-gray;
+  @apply !bg-transparent !border-border;
 }
 
 .p-autocomplete .p-inputtext:focus,
@@ -133,7 +137,7 @@
 
 .p-autocomplete .p-inputtext::placeholder,
 .p-autocomplete .p-autocomplete-dropdown::placeholder {
-  @apply text-light-gray;
+  @apply text-content-muted;
 }
 
 .p-autocomplete .p-inputtext {
@@ -157,15 +161,27 @@
 }
 
 .p-autocomplete-overlay .p-autocomplete-option.p-focus {
-  @apply !bg-pale;
+  @apply !bg-surface-muted;
+}
+
+.p-autocomplete-overlay {
+  @apply !bg-surface;
+}
+
+.p-autocomplete-list {
+  @apply !bg-transparent;
+}
+
+.p-autocomplete-option {
+  @apply !text-content;
+}
+
+.p-autocomplete-option:not(.p-autocomplete-option-selected):hover {
+  @apply !bg-surface-muted;
 }
 
 .p-datepicker-input {
   @apply !rounded-xl;
-}
-
-.p-datepicker-day-selected {
-  @apply !bg-primary !text-white;
 }
 
 /* Override Prime Vue style */
@@ -186,7 +202,7 @@
 }
 
 .p-datatable-thead > tr > th {
-  @apply !bg-transparent !text-light-gray;
+  @apply !bg-transparent !text-content-muted;
 }
 
 .p-datatable-tbody > tr {
@@ -194,7 +210,7 @@
 }
 
 .p-datatable-tbody > tr:hover {
-  @apply !bg-pale;
+  @apply !bg-surface-muted;
 }
 
 .p-datatable-tbody > tr > td {
@@ -222,11 +238,6 @@
 .p-tablist-content::before,
 .p-tablist-content::after {
   @apply !hidden;
-}
-
-.p-datatable-header-cell,
-.p-datatable .p-datatable-tbody>tr>td {
-  @apply !border-auxiliar-gray;
 }
 
 /* Responsive (Tested resolutions) */

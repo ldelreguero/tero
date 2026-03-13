@@ -92,7 +92,7 @@ class BrowserTool(AgentTool):
     config_schema: dict = load_schema(__file__)
     _tools: Optional[list[BaseTool]] = None
 
-    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]) -> Optional[dict]:
+    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]):
         pass
 
     async def teardown(self):

@@ -93,7 +93,7 @@ const handleTabChange = async (path: string) => {
     <div class="flex flex-col h-full w-full relative overflow-hidden">
       <Tabs :value="activeTab" :key="activeTab" class="container h-full mx-auto p-4 pt-0 max-w-6xl flex flex-col gap-4">
         <DashboardTabsSkeleton v-if="loading" :tabs-length="4"  />
-        <div v-else class="flex items-center w-full border-b-1 border-auxiliar-gray pb-2 min-h-[51px]" :class="{ 'justify-end': !globalTeamOwner, 'justify-between': globalTeamOwner }">
+        <div v-else class="flex items-center w-full border-b-1 pb-2 min-h-[51px]" :class="{ 'justify-end': !globalTeamOwner, 'justify-between': globalTeamOwner }">
           <TabList class="!p-0 !w-full !border-none">
             <Tab v-for="tab in tabs" :key="tab.value" :value="tab.value" @click="handleTabChange(tab.value)" class="!p-0 !border-none">
               <div class="flex items-center gap-2">

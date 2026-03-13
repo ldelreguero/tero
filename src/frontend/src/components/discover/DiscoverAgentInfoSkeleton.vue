@@ -1,6 +1,6 @@
 <template>
   <div class="animate-pulse space-y-6 min-h-[475px]">
-    <div class="flex items-center gap-2 justify-between w-full pb-5 pt-5 border-b border-auxiliar-gray animate-pulse">
+    <div class="flex items-center gap-2 justify-between w-full pb-5 pt-5 border-b animate-pulse">
       <div class="flex flex-row gap-2 items-center flex-1 min-w-0">
         <div class="h-12 w-12 rounded-full bg-auxiliar-gray"></div>
         <div class="flex flex-col gap-1 min-w-0">
@@ -23,7 +23,7 @@
     <div class="flex flex-col gap-6 animate-pulse">
       <div class="h-6 w-3/4 bg-auxiliar-gray rounded"></div>
 
-      <div class="flex flex-row gap-2 bg-pale p-2 px-8 rounded-md items-center justify-between h-12">
+      <div class="flex flex-row gap-2 bg-surface-muted p-2 px-8 rounded-md items-center justify-between h-12">
         <div class="flex flex-row gap-4 items-center">
           <div class="h-4 w-16 bg-auxiliar-gray rounded"></div>
           <div class="h-8 w-24 bg-auxiliar-gray rounded"></div>

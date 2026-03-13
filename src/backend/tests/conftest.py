@@ -1,3 +1,8 @@
+import pytest
+# Register assertion rewriting for helper modules BEFORE importing them
+# This enables pytest's assertion introspection (showing diffs) for assertions in these modules
+pytest.register_assert_rewrite('tests.common')
+
 import asyncio
 import logging
 import os
@@ -6,7 +11,6 @@ from typing import Generator, AsyncGenerator, List
 from fastapi import Depends
 import freezegun
 from httpx import AsyncClient, ASGITransport
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncConnection
 from sqlmodel.ext.asyncio.session import AsyncSession

@@ -140,7 +140,7 @@ watch(() => props.teamId, async () => {
 
 <template>
     <div v-if="loading" class="w-full">
-        <div class="w-full bg-pale rounded-lg p-4 animate-pulse">
+        <div class="w-full bg-surface-muted rounded-lg p-4 animate-pulse">
             <div class="h-5 bg-auxiliar-gray rounded w-32 mb-4"></div>
             <div>
                 <div v-for="i in pageSize" :key="i" class="flex justify-between items-center py-2">
@@ -181,7 +181,7 @@ watch(() => props.teamId, async () => {
             </Column>
             <Column field="minutesSaved" class="w-15">
                 <template #body="slotProps">
-                    <div class="flex items-center gap-1" :class="{'border-r-1 border-auxiliar-gray pr-4': teamId != MY_TEAM_ID}">
+                    <div class="flex items-center gap-1" :class="{'border-r-1 pr-4': teamId != MY_TEAM_ID}">
                         <DashboardTableDataComparisonCell
                             :previous-value="slotProps.data.previousMinutesSaved / 60"
                             :current-value="slotProps.data.minutesSaved / 60"
@@ -216,7 +216,7 @@ watch(() => props.teamId, async () => {
                 </template>
             </Column>
         </DataTable>
-        <span v-if="topAgents.length === 0" class="text-light-gray">
+        <span v-if="topAgents.length === 0" class="text-content-muted">
             {{ t('noAgentsFound') }}
         </span>
         <template #footer>
@@ -236,13 +236,13 @@ watch(() => props.teamId, async () => {
         @close="showAgentInfoModal = false"
         @load-more-data="handleLoadMoreUsers" >
             <template #avatar>
-                <AgentAvatar :agent="new Agent(selectedAgent.agentId, selectedAgent.agentName, undefined, selectedAgent.icon, selectedAgent.iconBgColor)" size="normal"/>
+                <AgentAvatar :agent="new Agent(selectedAgent.agentId, selectedAgent.agentName, undefined, selectedAgent.icon)" size="normal"/>
             </template>
             <template #subtitle v-if="selectedAgent?.authorName">
                 <span>{{ t('by') }} <span class="font-semibold">{{ selectedAgent?.authorName }}</span></span>
             </template>
             <template #summary>
-                <div class="flex items-center gap-1 pr-4 border-r-1 border-auxiliar-gray">
+                <div class="flex items-center gap-1 pr-4 border-r-1">
                     <DashboardTableDataComparisonCell
                         :previous-value="selectedAgent.previousMinutesSaved / 60"
                         :current-value="selectedAgent.minutesSaved / 60"

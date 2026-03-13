@@ -23,7 +23,8 @@ export default defineConfig({
             "webRequest",
             "declarativeNetRequest",
             "clipboardWrite",
-            "identity"
+            "identity",
+            "tabs"
         ],
         action: {}
     }),

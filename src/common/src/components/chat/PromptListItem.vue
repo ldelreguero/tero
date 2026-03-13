@@ -19,6 +19,7 @@ const { t } = useI18n();
 const props = defineProps<{
   prompt: AgentPrompt;
   selected: boolean;
+  readonly?: boolean;
 }>();
 const emit = defineEmits<{
   (e: "select", prompt: AgentPrompt): void;
@@ -59,7 +60,7 @@ function handlePromptClick(e: MouseEvent) {
   <ListItem
     v-if="!showPromptConfirmation"
     class="group p-3 py-0 mb-1"
-    :class="selected ? 'bg-pale' : ''"
+    :class="selected ? 'bg-surface-muted' : ''"
     @click="handlePromptClick($event)"
   >
     <template #start>
@@ -69,15 +70,15 @@ function handlePromptClick(e: MouseEvent) {
     <span>{{ prompt.name }}</span>
     <template #end>
       <div v-if="prompt.starter" class="flex items-center gap-1">
-        <IconPlayerPlay class="w-4 h-4 text-light-gray" />
-        <span class="text-sm text-light-gray">{{ t("starterText") }}</span>
+        <IconPlayerPlay class="w-4 h-4 text-content-muted" />
+        <span class="text-sm text-content-muted">{{ t("starterText") }}</span>
       </div>
-      <div v-if="prompt.canEdit && !prompt.starter"
+      <div v-if="prompt.canEdit && !prompt.starter && !readonly"
         class="opacity-0 group-hover:opacity-100 transition-opacity"
         @click.stop="menu?.toggle($event)">
         <IconDots />
       </div>
-      <Menu v-if="prompt.canEdit && !prompt.starter"
+      <Menu v-if="prompt.canEdit && !prompt.starter && !readonly"
         ref="menu"
         :model="menuItems"
         :popup="true">

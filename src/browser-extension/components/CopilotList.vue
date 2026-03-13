@@ -188,7 +188,7 @@ const getHubState = (hubUrl: string): boolean => {
       </div>
       <div v-if="!isLoading" class="space-y-2">
         <div v-if="groupedAgents.hubs.size === 0 && groupedAgents.standalone.length === 0" class="flex justify-center items-center w-full h-full py-8">
-          <span class="text-light-gray text-center whitespace-pre-line">{{ t('noAgents') }}</span>
+          <span class="text-content-muted text-center whitespace-pre-line">{{ t('noAgents') }}</span>
         </div>
         <HubSection 
           v-for="[hubUrl, hub] in groupedAgents.hubs" 

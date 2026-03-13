@@ -40,10 +40,10 @@ defineExpose({
     :style="{ border: 'none' }"
   >
     <template #header>
-      <div class="flex items-center gap-2 w-full py-2 pr-2 border-b-1 border-auxiliar-gray">
+      <div class="flex items-center gap-2 w-full py-2 pr-2 border-b-1">
         <div class="flex items-center gap-2 cursor-pointer flex-auto" @click.stop="collapsed = !collapsed">
-          <IconCaretRightFilled :class="['w-4 h-4 transition-transform text-light-gray', { 'rotate-90': !collapsed }]" />
-          <span class="text-base text-light-gray">{{ title }}</span>
+          <IconCaretRightFilled :class="['w-4 h-4 transition-transform text-content-muted', { 'rotate-90': !collapsed }]" />
+          <span class="text-base text-content-muted">{{ title }}</span>
         </div>
         <slot name="actions" />
       </div>

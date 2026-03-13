@@ -133,8 +133,16 @@ watch(() => props.showModal, () => {
 
 <template>
     <Dialog :visible="showModal" @update:visible="emit('update:showModal', $event)"
-        :header="t('registerExternalAgentTitle')" :modal="true" :draggable="false" :resizable="false" :closable="true"
-        class="w-200" @hide="hideRegisterExternalAgentModal">
+        @hide="hideRegisterExternalAgentModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        :close-on-escape="false" class="w-200">
+        <template #header>
+            <div class="flex justify-between items-center w-full border-b pb-4">
+                <h3>{{ t('registerExternalAgentTitle') }}</h3>
+                <div class="flex gap-4">
+                    <SimpleButton @click="hideRegisterExternalAgentModal"><IconX /></SimpleButton>
+                </div>
+            </div>
+        </template>
         <Form class="flex flex-col gap-5" @submit="registerExternalAgent">
             <div class="flex flex-col gap-3">
                 <div>{{ t('registerExternalAgentDescription') }}</div>
@@ -146,7 +154,7 @@ watch(() => props.showModal, () => {
                         :class="{'error': formFieldErrors.date}" :maxDate="new Date()" :manualInput="false">
                         <template #inputicon="slotProps">
                             <IconCalendarPlus
-                                class="bg-pale p-1 w-8 h-8 translate-y-[-.5rem] translate-x-[.3rem] rounded-lg"
+                                class="bg-surface-muted p-1 w-8 h-8 translate-y-[-.5rem] translate-x-[.3rem] rounded-lg"
                                 @click="slotProps.clickCallback"></IconCalendarPlus>
                         </template>
                     </DatePicker>
@@ -163,7 +171,7 @@ watch(() => props.showModal, () => {
                         </template>
                         <template #footer v-if="suggestions.length == 0">
                             <div class="p-1">
-                                <div class="flex items-center gap-2 py-2 px-4 hover:bg-pale cursor-pointer"
+                                <div class="flex items-center gap-2 py-2 px-4 hover:bg-surface-muted cursor-pointer"
                                     @click="handleAddExternalAgent">
                                     <img :src="externalAgentIcon" class="w-6 h-6" />
                                     <span class="">{{ t('addExternalAgentItem', {

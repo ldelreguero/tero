@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 import logging
 from typing import Optional
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import col, select, and_, delete
+from sqlmodel import col, select, and_, delete, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..core.repos import attr, scalar
@@ -19,7 +20,10 @@ class UserRepository:
         self._db = db
 
     async def find_by_id(self, user_id: int) -> Optional[User]:
-        stmt = select(User).where(and_(User.id == user_id, User.deleted_at == None)).options(
+        stmt = select(User).where(and_(
+            User.id == user_id,
+            or_(col(User.deleted_at).is_(None), col(User.deleted_at) > datetime.now(timezone.utc))
+        )).options(
             selectinload(attr(User.team_roles)).selectinload(attr(TeamRole.team))
         )
         result = await self._db.exec(stmt)
@@ -28,7 +32,21 @@ class UserRepository:
     async def find_by_username(self, username: str) -> Optional[User]:
         stmt = (
             select(User)
-            .where(and_(User.username == username, User.deleted_at == None))
+            .where(and_(
+                User.username == username,
+                or_(col(User.deleted_at).is_(None), col(User.deleted_at) > datetime.now(timezone.utc))
+            ))
+            .options(
+                selectinload(attr(User.team_roles)).selectinload(attr(TeamRole.team))
+            )
+        )
+        result = await self._db.exec(stmt)
+        return result.one_or_none()
+
+    async def find_by_username_include_deleted(self, username: str) -> Optional[User]:
+        stmt = (
+            select(User)
+            .where(User.username == username)
             .options(
                 selectinload(attr(User.team_roles)).selectinload(attr(TeamRole.team))
             )
@@ -43,7 +61,7 @@ class UserRepository:
         return user
 
     async def find_all_users(self) -> list[User]:
-        stmt = select(User).where(User.deleted_at == None)
+        stmt = select(User).where(or_(col(User.deleted_at).is_(None), col(User.deleted_at) > datetime.now(timezone.utc)))
         result = await self._db.exec(stmt)
         return list(result.all())
     

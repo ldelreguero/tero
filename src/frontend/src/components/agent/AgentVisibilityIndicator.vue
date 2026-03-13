@@ -5,5 +5,5 @@ defineProps<{
 </script>
 
 <template>
-  <IconLock v-if="!shared" class="text-light-gray !w-5" />
+  <IconLock v-if="!shared" class="text-content-muted !w-5" />
 </template>

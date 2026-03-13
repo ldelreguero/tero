@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Agent, Thread } from '@/services/api';
 import { useAgentStore } from '@/composables/useAgentStore';
-import { IconMessage2Plus, IconEditCircle, IconHistory, IconTrash, IconInfoCircle, IconCopyPlus } from '@tabler/icons-vue';
+import { IconMessage2Plus, IconEditCircle, IconHistory, IconTrash, IconInfoCircle, IconCopyPlus, IconTestPipe, IconLoader2 } from '@tabler/icons-vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 
 const { configureAgent, cloneAgent } = useAgentStore();
@@ -12,17 +12,21 @@ const { handleError } = useErrorHandler();
 const props = defineProps<{
     agent: Agent,
     chat: Thread,
-    editingAgent?: boolean
+    editingAgent?: boolean,
+    testCaseLoading?: boolean,
+    hasMessages?: boolean
 }>()
 const emit = defineEmits<{
     (e: 'showPastChats'): void
     (e: 'deleteChat', chat: Thread): void
     (e: 'newChat'): void
+    (e: 'createTestCase'): void
 }>();
 
 
 const { t } = useI18n();
 const showDeleteConfirmation = ref(false);
+const showCreateTestCaseConfirmation = ref(false);
 const menuIsActive = ref(false);
 const showAgentInfoModal = ref(false);
 
@@ -61,9 +65,13 @@ const handleCloneAgent = async () => {
   }
 }
 
+const handleCreateTestCase = () => {
+  emit('createTestCase');
+}
+
 </script>
 <template>
-  <div class="flex items-center gap-2 px-3 py-1.5 text-light-gray border border-auxiliar-gray rounded-2xl" :class="[{ '!bg-abstracta !text-white': menuIsActive }]">
+  <div class="flex items-center gap-2 px-3 py-1.5 text-content-muted border rounded-2xl dark:bg-surface-muted dark:border-none" :class="[{ '!bg-abstracta !text-white': menuIsActive }]">
     <AgentAvatar :agent="agent" :desaturated="!menuIsActive">
       <IconSparkles class="text-white" fill="currentColor" />
     </AgentAvatar>
@@ -85,6 +93,22 @@ const handleCloneAgent = async () => {
             tablerIcon: IconMessage2Plus,
             command: () => emit('newChat')
           },
+          {
+            label: t('previousChatsTooltip'),
+            tablerIcon: IconHistory,
+            command: handlePreviousChats
+          },
+          ...(!editingAgent && agent.canEdit && hasMessages ? [{
+            label: t('createTestCaseTooltip'),
+            tablerIcon: IconTestPipe,
+            command: () => showCreateTestCaseConfirmation = true
+          }] : []),
+          {
+            label: t('deleteChatTooltip'),
+            tablerIcon: IconTrash,
+            command: ()=> showDeleteConfirmation = true
+          },
+          { separator: true },
           ...(!editingAgent ? [{
             label: t('agentInfoTooltip'),
             tablerIcon: IconInfoCircle,
@@ -99,18 +123,8 @@ const handleCloneAgent = async () => {
             label: t('cloneAgentTooltip'),
             tablerIcon: IconCopyPlus,
             command: handleCloneAgent
-          },
-          { separator: true },
-          {
-            label: t('previousChatsTooltip'),
-            tablerIcon: IconHistory,
-            command: handlePreviousChats
-          },
-          {
-            label: t('deleteChatTooltip'),
-            tablerIcon: IconTrash,
-            command: ()=> showDeleteConfirmation = true
-          }]" />
+          }
+         ]" />
     </div>
   </div>
   <Dialog v-model:visible="showDeleteConfirmation" :header="t('deleteConfirmTitle')" :modal="true" :draggable="false"
@@ -128,6 +142,21 @@ const handleCloneAgent = async () => {
     </div>
   </Dialog>
   <DiscoverAgentInfo v-if="!editingAgent" :agent-id="agent.id" :show-modal="showAgentInfoModal" @close="showAgentInfoModal = false" />
+  <Dialog v-model:visible="showCreateTestCaseConfirmation" :header="t('createTestCaseConfirmTitle')" :modal="true" :draggable="false"
+    :resizable="false" :closable="false" class="max-w-150">
+    <div class="flex flex-col gap-5">
+      <div class="flex flex-row gap-2 items-start whitespace-pre-line">
+        {{ t('createTestCaseConfirmDescription') }}
+      </div>
+      <div class="flex flex-row gap-2 justify-end">
+        <SimpleButton @click="showCreateTestCaseConfirmation = false" shape="square" variant="secondary" :disabled="testCaseLoading">{{ t('cancelButton') }}</SimpleButton>
+        <SimpleButton @click="handleCreateTestCase" variant="primary" shape="square" :disabled="testCaseLoading">
+          <IconLoader2 v-if="testCaseLoading" class="animate-spin" />
+          <span v-else>{{ t('createButton') }}</span>
+        </SimpleButton>
+      </div>
+    </div>
+  </Dialog>
 </template>
 <i18n>
   {
@@ -141,7 +170,12 @@ const handleCloneAgent = async () => {
       "newChatTooltip": "New chat",
       "editAgentTooltip": "Edit agent",
       "agentInfoTooltip": "View details",
-      "cloneAgentTooltip": "Clone agent"
+      "cloneAgentTooltip": "Clone agent",
+      "createTestCaseTooltip": "Create test",
+      "createTestCaseConfirmTitle": "Create test from chat",
+      "createTestCaseConfirmDescription": "This will create a new test case with the currently visible conversation. You will be redirected to the test case after creation.",
+      "cancelButton": "Cancel",
+      "createButton": "Create"
     },
     "es": {
       "deleteChatTooltip": "Eliminar chat",
@@ -153,7 +187,12 @@ const handleCloneAgent = async () => {
       "newChatTooltip": "Nuevo chat",
       "editAgentTooltip": "Editar agente",
       "agentInfoTooltip": "Ver detalles",
-      "cloneAgentTooltip": "Clonar agente"
+      "cloneAgentTooltip": "Clonar agente",
+      "createTestCaseTooltip": "Crear test",
+      "createTestCaseConfirmTitle": "Crear test a partir de chat",
+      "createTestCaseConfirmDescription": "Esto creará un nuevo caso de prueba con la conversación actualmente visible. Serás redirigido al caso de prueba después de la creación.",
+      "cancelButton": "Cancelar",
+      "createButton": "Crear"
     }
   }
 </i18n>

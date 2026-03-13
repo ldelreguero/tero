@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ApiService, Thread, HttpError, TestCaseResultStatus, TestSuiteRun, TestSuiteRunStatus } from '@/services/api';
@@ -10,7 +10,7 @@ import { useToast } from 'vue-toastification';
 import ToastMessage from '@/components/common/ToastMessage.vue';
 import { useTestCaseStore } from '@/composables/useTestCaseStore';
 import { useTestExecutionStore } from '@/composables/useTestExecutionStore';
-import { handleOAuthRequestsIn, AuthenticationError } from '@/services/toolOAuth';
+import { handleOAuthRequestsIn, AuthenticationError } from '@/services/toolAuth';
 
 export type { TestCaseExecutionState } from '@/composables/useTestExecutionStore';
 
@@ -26,6 +26,7 @@ const agentId = ref<number>();
 const threadId = ref<number>();
 const showTestCaseEditor = ref<boolean>(false);
 const isEditingTestCase = ref<boolean>(true);
+const initialTab = ref<string>('0');
 const testCasePanel = ref<InstanceType<typeof AgentTestcasePanel>>();
 const loadingTests = ref<boolean>(true);
 const testRunStartedByCurrentUser = ref<boolean>(false);
@@ -110,7 +111,7 @@ const runTestSuite = async (testCaseIds?: number[]) => {
   } catch (error) {
     if (error instanceof AuthenticationError) {
       toast.error(
-        { component: ToastMessage, props: { message: t('authenticationCancelled') } },
+        { component: ToastMessage, props: { message: t(error.errorCode) } },
         { timeout: 5000, icon: false }
       )
       isEditingTestCase.value = true
@@ -145,20 +146,37 @@ const handleRunError = async (error: unknown) => {
   }
 }
 
+const getTestcaseIdFromRoute = (routeObj: typeof route) => {
+  const testcaseId = routeObj.query.testcaseId;
+  return testcaseId ? parseInt(testcaseId as string) : undefined;
+}
+
 onMounted(async () => {
   agentId.value = parseInt(route.params.agentId as string);
+  const testcaseId = getTestcaseIdFromRoute(route);
+  if (testcaseId) {
+    initialTab.value = '1';
+  }
   await startChat();
   if (agentId.value) {
-    await loadTestCases(agentId.value);
+    await loadTestCases(agentId.value, testcaseId);
+  }
+  if (testcaseId) {
+    showTestCaseEditor.value = true;
   }
 });
 
-const loadTestCases = async (id: number) => {
+const loadTestCases = async (id: number, testcaseId?: number) => {
   try {
     await loadTestCasesFromStore(id)
 
     if(testCasesStore.testCases.length) {
-      testCasesStore.setSelectedTestCase(testCasesStore.testCases[0])
+      if (testcaseId) {
+        testCasesStore.setSelectedTestCaseById(testcaseId)
+      }
+      if (!testCasesStore.selectedTestCase) {
+        testCasesStore.setSelectedTestCase(testCasesStore.testCases[0])
+      }
     }
 
     const suiteRuns = await api.findTestSuiteRuns(id, 1, 0)
@@ -183,13 +201,18 @@ const onEditingTestCase = (editing: boolean) => {
 
 onBeforeRouteUpdate(async (to) => {
   testRunStartedByCurrentUser.value = false;
+  showTestCaseEditor.value = false;
   clearTestCases();
   clearExecutionStore();
 
   agentId.value = parseInt(to.params.agentId as string);
+  const testcaseId = getTestcaseIdFromRoute(to);
   await startChat();
   if (agentId.value) {
-    await loadTestCases(agentId.value);
+    await loadTestCases(agentId.value, testcaseId);
+  }
+  if (testcaseId) {
+    showTestCaseEditor.value = true;
   }
 });
 </script>
@@ -204,7 +227,8 @@ onBeforeRouteUpdate(async (to) => {
         @import-agent="loadTestCases(agentId!)" :test-cases="testCasesStore.testCases" @run-tests="runTestSuite()"
         @run-single-test="(id: number) => runTestSuite([id])" @select-execution="handleSelectExecution"
         :is-comparing-result-with-test-spec="isComparingResultWithTestSpec"
-        :test-spec-messages="testCasePanel?.testSpecMessages"/>
+        :test-spec-messages="testCasePanel?.testSpecMessages"
+        :initial-tab="initialTab"/>
     </template>
     <template #right>
       <ChatPanel :thread-id="threadId" v-if="threadId && !showTestCaseEditor" :editing-agent="true"
@@ -222,12 +246,16 @@ onBeforeRouteUpdate(async (to) => {
   "en": {
     "suiteExecutionFailed": "Test suite execution failed",
     "suiteAlreadyRunning": "Please wait for the test suite to finish running before starting a new execution",
-    "authenticationCancelled": "Tool authentication was cancelled. Please authenticate to run tests."
+    "authenticationWindowBlocked": "The authentication popup could not be opened. Please check that popups are allowed for this site and try again.",
+    "authenticationCancelled": "The authentication was cancelled. Please, try again and complete the authentication to run the tests.",
+    "authenticationAccessDenied": "The authentication was denied by the server. Please verify that you actually have the permissions necessary to use it."
   },
   "es": {
     "suiteExecutionFailed": "Falló la ejecución de la suite de tests",
     "suiteAlreadyRunning": "Espera a que el test suite termine de correr para lanzar una nueva ejecucion",
-    "authenticationCancelled": "La autenticación de la herramienta fue cancelada. Por favor autentícate para ejecutar los tests."
+    "authenticationWindowBlocked": "No se pudo abrir la ventana de autenticación. Por favor, verifica que las ventanas emergentes estén permitidas para este sitio y vuelve a intentarlo.",
+    "authenticationCancelled": "La autenticación fue cancelada. Por favor, inténtelo de nuevo y complete la autenticación para correr los tests.",
+    "authenticationAccessDenied": "La autenticación fue denegada por el servidor. Por favor, verifica que tengas los permisos necesarios para usarlo."
   }
 }
 </i18n>

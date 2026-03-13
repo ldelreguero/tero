@@ -16,7 +16,7 @@ const props = defineProps<{
                          props.numberOfCards === 1 ? 'w-full' : 
                          props.numberOfCards === 2 ? 'w-1/2' : 
                          props.numberOfCards === 3 ? 'w-1/3' : 'w-1/4',
-                         'bg-pale rounded-lg p-4 animate-pulse'
+                         'bg-surface-muted rounded-lg p-4 animate-pulse'
                      ]">
                     <div class="flex items-center justify-between gap-2 mb-2">
                         <div class="h-4 bg-auxiliar-gray rounded w-24"></div>

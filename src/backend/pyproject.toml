@@ -41,6 +41,7 @@ dependencies = [
     "boto3 (>=1.39.4,<2.0.0)",
     "langchain-google-genai (>=3.1.0,<4.0.0)",
     "fastapi-mcp (>=0.4.0,<1.0.0)",
+    "tokenizers (>=0.21.0,<1.0.0)",
     "jinja2 (>=3.1.6,<4.0.0)",
     "aiosmtplib (>=5.0.0,<6.0.0)",
     "xlrd (>=2.0.2,<3.0.0)",
@@ -48,8 +49,7 @@ dependencies = [
     "json-schema-to-pydantic (>=0.4.3,<0.5.0)",
     "transformers (>=4.57.1,<5.0.0)",
     "python-slugify (>=8.0.4,<9.0.0)",
-    # Set mcp to fixed version because newer versions have conflicts with current implementation
-    "mcp (>=1.22.0,<1.23.0)",
+    "mcp (>=1.22.0,<1.26.0)",
     "pypdfium2 (>=5.0.0,<6.0.0)"
 ]
 

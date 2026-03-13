@@ -4,7 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { IconBook2, IconPlus } from '@tabler/icons-vue';
 import { AgentPrompt } from '../../utils/domain';
 
-const props = defineProps<{prompts: AgentPrompt[], selectedPromptIndex: number}>()
+const props = defineProps<{
+  prompts: AgentPrompt[]
+  selectedPromptIndex: number
+  readonly?: boolean
+}>()
 const emit =defineEmits<{
   (e: 'promptCreate'): void
   (e: 'promptSelect', prompt: AgentPrompt): void
@@ -37,7 +41,7 @@ watch(()=>props.selectedPromptIndex, scrollSelectedIntoView)
                     <IconBook2 />
                     <span class="text-lg">Prompts</span>
                 </div>
-                <div>
+                <div v-if="!readonly">
                     <SimpleButton @click="emit('promptCreate')" variant="primary" shape="rounded">
                         <IconPlus />
                         <span class="mx-1">
@@ -51,6 +55,7 @@ watch(()=>props.selectedPromptIndex, scrollSelectedIntoView)
             <div v-if="props.prompts.length > 0" class="overflow-y-auto">
                 <div v-for="(prompt, index) in prompts" ref="itemRefs">
                     <PromptListItem :prompt="prompt" :selected="index === selectedPromptIndex"
+                        :readonly="readonly"
                         @delete="emit('promptDelete', $event)"
                         @select="emit('promptSelect', $event)"
                         @edit="emit('promptEdit', $event)"></PromptListItem>

@@ -15,11 +15,11 @@ defineProps<{
 <template>
   <div class="flex flex-row items-center gap-1">
     <div class="flex flex-row items-center gap-2 min-w-14" v-tooltip.bottom="t('passed')">
-      <IconSquareCheckFilled class="text-success" />
+      <SimpleIcon filled :icon="IconSquareCheckFilled" class="text-success" />
       <span>{{ passed }}</span>
     </div>
     <div class="flex flex-row items-center gap-2 min-w-14" v-tooltip.bottom="t('failed')">
-      <IconSquareXFilled class="text-error" />
+      <SimpleIcon filled :icon="IconSquareXFilled" class="text-error" />
       <span>{{ failed }}</span>
     </div>
     <div class="flex flex-row items-center gap-2 min-w-14" v-tooltip.bottom="t('error')">
@@ -27,7 +27,7 @@ defineProps<{
       <span>{{ error }}</span>
     </div>
     <div class="flex flex-row items-center gap-2 min-w-14" v-tooltip.bottom="t('skipped')">
-      <IconSquareChevronsRightFilled class="text-light-gray" />
+      <SimpleIcon filled :icon="IconSquareChevronsRightFilled" class="text-content-muted" />
       <span>{{ skipped }}</span>
     </div>
   </div>

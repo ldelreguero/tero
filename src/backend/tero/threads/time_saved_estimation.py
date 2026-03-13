@@ -7,16 +7,13 @@ from langchain_core.messages import (
     HumanMessage,
     BaseMessage,
 )
-from langchain_core.messages.utils import (
-    _default_text_splitter,
-    _first_max_tokens,
-)
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..ai_models import ai_factory
 from ..ai_models.domain import LlmTemperature, LlmModel
 from ..ai_models.repos import AiModelRepository
 from ..core.env import env
+from ..threads.core import trim_messages_to_fit_model
 from ..threads.repos import ThreadMessageRepository
 from ..usage.domain import MessageUsage
 from .domain import Thread, ThreadMessage, ThreadMessageOrigin
@@ -43,19 +40,21 @@ async def estimate_minutes_saved(user_message: str, agent_response: str, thread:
     ]
 
     token_counter = llm.get_num_tokens_from_messages
-    max_tokens = max(
-        0,
-        # Leave some buffer for the agent name and description, and other fixed texts
-        int(internal_generator_model.token_limit * 0.9)
-        - token_counter([AIMessage(SYSTEM_PROMPT)])
-        - internal_generator_model.output_token_limit,
+    prompt_skeleton = SYSTEM_PROMPT.format(
+        agent_name=thread.agent.name,
+        agent_description=thread.agent.description,
+        user_message="",
+        agent_response="",
+        previous_message="",
+        previous_agent_response="",
+        reference_examples=""
     )
-    trimmed_messages = _first_max_tokens(
+    reserved_tokens = token_counter([SystemMessage(prompt_skeleton)])
+    trimmed_messages = trim_messages_to_fit_model(
         messages,
-        max_tokens=max_tokens,
         token_counter=token_counter,
-        text_splitter=_default_text_splitter,
-        partial_strategy="first"
+        model=internal_generator_model,
+        reserved_tokens=reserved_tokens,
     )
 
     system_prompt = SYSTEM_PROMPT.format(

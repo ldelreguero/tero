@@ -126,7 +126,7 @@ const showUserInfo = async (user: UserUsageItem) => {
 
 <template>
     <div v-if="loading" class="w-full h-full">
-        <div class="bg-pale rounded-lg p-4 animate-pulse">
+        <div class="bg-surface-muted rounded-lg p-4 animate-pulse">
             <div class="h-5 bg-auxiliar-gray rounded w-32 mb-6"></div>
             <div class="space-y-4">
                 <div v-for="i in pageSize" :key="i" class="flex justify-between items-center py-2">

@@ -33,6 +33,7 @@ const props = defineProps<{
   enablePrompts?: boolean
   borderless?: boolean
   shareablePrompts?: boolean
+  readonlyPrompts?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -373,7 +374,7 @@ defineExpose({
       <div class="max-w-[837px] mx-auto w-full">
         <div
           class="flex flex-col gap-1 relative rounded-xl bg-surface"
-          :class="!borderless ? 'border border-auxiliar-gray focus-within:border-abstracta shadow-sm p-2' : ''">
+          :class="!borderless ? 'border focus-within:border-abstracta shadow-sm p-2' : ''">
           <div class="w-full absolute -translate-x-2 -translate-y-full -mt-6">
             <PromptEditor v-if="editingPrompt" 
               :editing-prompt="editingPrompt"
@@ -384,6 +385,7 @@ defineExpose({
             <PromptsPanel v-if="isShowingPrompts && !editingPrompt"
               :prompts="filteredPrompts"
               :selected-prompt-index="selectedPromptIndex"
+              :readonly="readonlyPrompts"
               @prompt-create="showCreatePrompt"
               @prompt-select="selectPrompt" 
               @prompt-edit="showEditPrompt"

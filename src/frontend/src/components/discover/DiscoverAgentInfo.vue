@@ -89,12 +89,12 @@ watch(() => [showModal, agentId],
   <Dialog :visible="showModal" @update:visible="onClose" :modal="true" :draggable="false" :resizable="false" :closable="false" class="w-220" :showHeader="false" :dismissableMask="true">
       <DiscoverAgentInfoSkeleton v-if="isLoading" />
       <div v-if="agent && !isLoading" class="flex flex-col gap-5">
-        <div class="flex items-center gap-2 justify-between w-full pb-5 pt-5 border-b border-auxiliar-gray">
+        <div class="flex items-center gap-2 justify-between w-full pb-5 pt-5 border-b">
           <div class="flex flex-row gap-2 items-center flex-1 min-w-0">
             <AgentAvatar :agent="agent" size="large"/>
             <div class="flex flex-col gap-1 min-w-0">
               <span class="font-semibold text-2xl truncate min-w-0 max-w-full block">{{ agent.name }}</span>
-              <div class="flex gap-1 text-light-gray text-xs w-fit">
+              <div class="flex gap-1 text-content-muted text-xs w-fit">
                 <span v-if="agent.user?.name" class="truncate">{{ t('by') }} <span class="font-semibold">{{ agent.user.name }}</span></span>
                 <span v-if="agent.user?.name">|</span>
                 <span class="truncate">
@@ -117,8 +117,8 @@ watch(() => [showModal, agentId],
           </div>
         </div>
         <div class="flex flex-col gap-5">
-            <span :class="{ 'text-sm text-light-gray': !agent.description }">{{ agent.description || t('noDescription') }}</span>
-            <div class="flex flex-row gap-2 bg-pale p-2 px-8 rounded-md items-center justify-between">
+            <span :class="{ 'text-sm text-content-muted': !agent.description }">{{ agent.description || t('noDescription') }}</span>
+            <div class="flex flex-row gap-2 bg-surface-muted p-2 px-8 rounded-md items-center justify-between">
               <div class="flex flex-row gap-4 items-center">
                 <span class="text-sm font-semibold">{{ t('modelLabel') }}</span>
                 <span class="text-m p-1 px-4 rounded-md bg-surface font-semibold flex flex-row gap-2 items-center">
@@ -135,7 +135,7 @@ watch(() => [showModal, agentId],
             </div>
             <div class="form-field relative gap-2">
               <span class="text-m font-semibold">{{ t('systemPromptLabel') }}</span>
-              <div class="text-m whitespace-pre-line p-4 border border-auxiliar-gray rounded-md max-h-50 overflow-y-auto">
+              <div class="text-m whitespace-pre-line p-4 border rounded-md max-h-50 overflow-y-auto">
                 {{ agent.systemPrompt }}
               </div>
             </div>

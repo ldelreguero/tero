@@ -19,7 +19,7 @@ from tero.teams.domain import *  # type: ignore
 from tero.threads.domain import *  # type: ignore
 from tero.tools.docs.domain import *  # type: ignore
 from tero.tools.jira import *  # type: ignore
-from tero.tools.oauth import *  # type: ignore
+from tero.tools.auth import *  # type: ignore
 from tero.usage.domain import *  # type: ignore
 from tero.users.domain import *  # type: ignore
 from tero.external_agents.domain import *  # type: ignore

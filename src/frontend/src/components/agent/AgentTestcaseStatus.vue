@@ -16,15 +16,14 @@ const statusConfig = computed(() => {
             return {
                 icon: IconLoader2,
                 label: t('running'),
-                iconClass: 'text-light-gray animate-spin',
-                size: undefined
+                iconClass: 'text-content-muted animate-spin'
             }
         case TestCaseResultStatus.SUCCESS:
             return {
                 icon: IconSquareCheckFilled,
                 label: t('success'),
                 iconClass: 'text-success',
-                size: undefined
+                filled: true
             }
         case TestCaseResultStatus.ERROR:
             return {
@@ -38,21 +37,20 @@ const statusConfig = computed(() => {
                 icon: IconSquareXFilled,
                 label: t('failure'),
                 iconClass: 'text-error',
-                size: undefined
+                filled: true
             }
         case TestCaseResultStatus.PENDING:
             return {
                 icon: IconClockPlay,
                 label: t('pending'),
-                iconClass: 'text-light-gray',
-                size: undefined
+                iconClass: 'text-content-muted'
             }
         case TestCaseResultStatus.SKIPPED:
             return {
                 icon: IconSquareChevronsRightFilled,
                 label: t('skipped'),
-                iconClass: 'text-light-gray',
-                size: undefined
+                iconClass: 'text-content-muted',
+                filled: true
             }
         default:
             return null
@@ -62,7 +60,7 @@ const statusConfig = computed(() => {
 
 <template>
     <div v-if="statusConfig" class="flex flex-row items-center gap-2">
-        <component :is="statusConfig.icon" :class="statusConfig.iconClass" :size="statusConfig.size" />
+        <SimpleIcon :filled="statusConfig.filled" :icon="statusConfig.icon" :class="statusConfig.iconClass" :size="statusConfig.size" />
         <span>{{ statusConfig.label }}</span>
     </div>
 </template>

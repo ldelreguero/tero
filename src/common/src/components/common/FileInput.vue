@@ -162,22 +162,22 @@ defineExpose({
 </script>
 
 <template>
-  <div v-if="!isMaxFilesReached">
+  <div>
     <div @dragover="handleDragEvent($event, true)" @dragleave="handleDragEvent($event, false)" @drop="handleDrop">
       <input type="file" multiple ref="inputRef" class="hidden" :accept="formattedFileAccept" @change="handleFileChange" />
-      <div v-if="variant == 'input'" :class="[isDragging ? '!border-abstracta animation-pulse' : '', disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-auxiliar-gray/15']" class="flex flex-col items-center border-2 border-dashed border-auxiliar-gray rounded-lg p-3 text-light-gray" @click="triggerFileInput">
+      <div v-if="variant == 'input'" :class="[isDragging ? '!border-abstracta animation-pulse' : '', disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-auxiliar-gray/15']" class="flex flex-col items-center border-2 border-dashed rounded-lg p-3 text-content-muted" @click="triggerFileInput">
         <div class="w-full flex flex-col items-center">
           <span>{{ t('dragDropBrowse', maxFiles === 1 ? maxFiles : 2) }}</span>
         </div>
       </div>
       <div v-else class="w-full flex flex-col">
-        <div v-if="isDragging" class="absolute inset-0 bg-pale/90 rounded-xl flex items-center justify-center pointer-events-none">
+        <div v-if="isDragging && !isMaxFilesReached" class="absolute inset-0 bg-surface-muted/90 rounded-xl flex items-center justify-center pointer-events-none">
           <div class="font-medium">{{ t('dropFilesHere', { extensions: formattedFileNames(allowedExtensions) }) }}</div>
         </div>
         <slot />
       </div>
     </div>
-    <div v-if="showLabel" class="text-sm mt-3 text-light-gray text-center">
+    <div v-if="showLabel" class="text-sm mt-3 text-content-muted text-center">
       {{ t('supportedFileTypes') }}: <span class="bold-span">{{ formattedFileNames(allowedExtensions) }}</span> | {{ t('maxFileSize') }}: <span class="bold-span">{{ MAX_FILE_SIZE_MB }} MB</span>
     </div>
   </div>

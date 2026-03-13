@@ -65,14 +65,14 @@ watch(() => props.isComplete, (newIsComplete) => {
 
 <template>
   <div v-if="showStatus" class="status-container mb-2">
-    <div class="overflow-hidden border-b border-auxiliar-gray">
+    <div class="overflow-hidden border-b">
       <button @click="toggleExpanded" class="w-full flex items-center justify-between py-2">
         <div v-if="!isComplete" class="flex items-center gap-2 w-full text-left">
-          <div class="w-3 h-3 p-1 border-2 border-auxiliar-gray border-t-transparent rounded-full animate-spin"></div>
-          <span class="text-sm text-light-gray" v-html="currentStatusText"></span>
+          <div class="w-3 h-3 p-1 border-2 border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-sm text-content-muted" v-html="currentStatusText"></span>
         </div>
         <div v-else class="flex items-center gap-2">
-          <span class="text-sm font-medium text-light-gray">
+          <span class="text-sm font-medium text-content-muted">
             {{ thoughtTimeInSeconds > 0 ? t('endMessage', { time: thoughtTimeInSeconds }) : t('thoughtProcessMessage') }}
           </span>
         </div>
@@ -81,7 +81,7 @@ watch(() => props.isComplete, (newIsComplete) => {
       <div v-if="isExpanded" class="mb-2 overflow-y-auto" :class="{ 'max-h-60': isComplete }">
         <div v-for="(status, index) in statusUpdates" :key="index" class="flex items-stretch gap-1 text-sm animate-fade-in opacity-0" :style="{ animationDelay: `${index * 0.1}s` }" >
           <div class="flex flex-col items-center">
-            <IconPointFilled class="text-light-gray" size="16"/>
+            <IconPointFilled class="text-content-muted" size="16"/>
             <span v-if="index !== statusUpdates.length - 1" class="w-[2px] flex-1 bg-auxiliar-gray"></span>
           </div>
           <div class="w-full pb-3">

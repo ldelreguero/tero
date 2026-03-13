@@ -2,9 +2,9 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LlmModel, LlmModelVendor, LlmTemperature, ReasoningEffort } from '@/services/api'
-import openAiIcon from '@/assets/images/open-ai.svg'
-import googleIcon from '@/assets/images/gemini.svg'
-import anthropicIcon from '@/assets/images/anthropic.svg'
+import openAiIcon from '@/assets/images/open-ai.svg?raw'
+import googleIcon from '@/assets/images/gemini.svg?raw'
+import anthropicIcon from '@/assets/images/anthropic.svg?raw'
 import LlmModelSettings from './LlmModelSettings.vue'
 
 const props = defineProps<{
@@ -112,12 +112,12 @@ const onSettingsChange = () => {
         <template #option="slotProps">
           <div class="flex items-stretch gap-3 w-full">
             <div class="w-32 flex items-center self-stretch">
-              <img v-if="slotProps.option.showVendor && slotProps.option.vendor && vendorLogos[slotProps.option.vendor as LlmModelVendor]"
-                :src="vendorLogos[slotProps.option.vendor as LlmModelVendor]"
-                :alt="slotProps.option.vendor"
-                 />
+              <span v-if="slotProps.option.showVendor && slotProps.option.vendor && vendorLogos[slotProps.option.vendor as LlmModelVendor]"
+                v-html="vendorLogos[slotProps.option.vendor as LlmModelVendor]"
+                class="flex items-center text-content"
+              />
             </div>
-            <div :class="['flex-1 flex flex-col gap-1 hover:bg-pale rounded-md p-3', slotProps.selected ? 'selected-option' : '']">
+            <div :class="['flex-1 flex flex-col gap-1 hover:bg-surface-muted rounded-md p-3', slotProps.selected ? 'selected-option' : '']">
               <div class="font-medium">{{ slotProps.option.name }}</div>
               <div class="text-sm font-normal break-words whitespace-normal">{{ slotProps.option.description }}</div>
             </div>

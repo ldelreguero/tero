@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, onMounted, reactive, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n'
 import { ApiService, Agent, ThreadMessageOrigin, ThreadMessage, ThreadMessagePart, HttpError, findManifest, TeamRoleStatus, Role } from '@/services/api';
 import { useChatStore } from '@/composables/useChatStore';
@@ -9,7 +10,7 @@ import { useErrorHandler } from '@/composables/useErrorHandler';
 import { ChatUiMessage, type StatusUpdate } from '@tero/common/components/chat/ChatMessage.vue';
 import { useAgentPromptStore } from '@/composables/useAgentPromptStore';
 import ChatPanelHeader from './ChatPanelHeader.vue';
-import { AuthenticationError, handleOAuthRequestsIn } from '@/services/toolOAuth';
+import { AuthenticationError, handleOAuthRequestsIn } from '@/services/toolAuth';
 import { UserFeedback, AgentPrompt, UploadedFile, FileStatus } from '../../../../common/src/utils/domain';
 import ChatInput from '../../../../common/src/components/chat/ChatInput.vue';
 import { loadUserProfile } from '@/composables/useUserProfile';
@@ -27,6 +28,7 @@ const props = defineProps({
 const emit = defineEmits(['newChat', 'selectChat']);
 
 const { t } = useI18n();
+const router = useRouter();
 const api = new ApiService();
 const { chatsStore, updateChat, newChat, setCurrentChat } = useChatStore();
 const { agentsStore, updateAgent, setCurrentAgent } = useAgentStore();
@@ -44,6 +46,7 @@ const chatInputRef = ref<InstanceType<typeof ChatInput>>()
 const attachedFiles = ref<UploadedFile[]>([]);
 const feedbackLoadingMessageId = ref<number | undefined>(undefined);
 const showPastChats = ref<boolean>(false);
+const testCaseLoading = ref(false);
 const shareablePrompts = ref(false)
 
 const chat = computed(() => chatsStore.currentChat);
@@ -301,6 +304,7 @@ const processAnswerError = async (e: unknown, answerMsg: ChatUiMessage, userUIMe
   } else {
     answerMsg.children.push(ChatUiMessage.agentErrorMessage(text))
   }
+  answerMsg.completeStatus()
 }
 
 const savePrompt = async (prompt: AgentPrompt) => {
@@ -372,6 +376,19 @@ const handleViewFile = (file: UploadedFile) => {
   window.open(`/chat/${chat.value!.id}/files/${file.id}`, '_blank')
 }
 
+const handleCreateTestCase = async () => {
+  try {
+    testCaseLoading.value = true;
+    const { message } = getSelectedBranch(messages.value, showMessageIndexes.value);
+    const testCase = await api.addTestCase(chat.value!.agent.id, chat.value!.id, message?.id)
+    router.push(`/agents/${chat.value!.agent.id}?testcaseId=${testCase.thread.id}`)
+  } catch (e) {
+    handleError(e)
+  } finally {
+    testCaseLoading.value = false;
+  }
+}
+
 </script>
 
 <template>
@@ -382,8 +399,11 @@ const handleViewFile = (file: UploadedFile) => {
         :chat="chat"
         :agent="agentsStore.currentAgent"
         :editing-agent="editingAgent"
+        :test-case-loading="testCaseLoading"
+        :has-messages="messages.length > 0"
         @new-chat="onNewChat"
         @show-past-chats="onShowPastChats"
+        @create-test-case="handleCreateTestCase"
       />
     </template>
     <div class="flex-1 flex flex-col min-h-0 relative">
@@ -415,11 +435,11 @@ const handleViewFile = (file: UploadedFile) => {
             <p class="text-left whitespace-pre-line text-lg">
               {{ t('starterText') }}
             </p>
-            <div class="flex flex-wrap gap-4 text-light-gray ">
+            <div class="flex flex-wrap gap-4 text-content-muted ">
               <div v-for="prompt in starterPrompts" :key="prompt.id">
                 <button
                   @click="chatInputRef?.selectPrompt(prompt)"
-                  class="w-[185px] h-[94px] rounded-lg border border-auxiliar-gray p-3 text-left hover:border-abstracta shadow flex items-start">
+                  class="w-[185px] h-[94px] rounded-lg border p-3 text-left hover:border-abstracta shadow flex items-start">
                     <span class="line-clamp-3">
                       {{ prompt.name }}
                     </span>
@@ -456,17 +476,17 @@ const handleViewFile = (file: UploadedFile) => {
 <i18n lang="json">
   {
     "en": {
-      "authenticationWindowClosed": "The authentication window was closed before completing the process. Please, try again and keep the authentication popup window open until it finishes.",
+      "authenticationWindowBlocked": "The authentication popup could not be opened. Please check that popups are allowed for this site and try again.",
       "authenticationCancelled": "The authentication was cancelled. Please, try again and complete the authentication to use this agent.",
-      "authenticationAccessDenied": "The authentication was denied by the MCP server. Please verify that you actually have the permissions necessary to use it.",
+      "authenticationAccessDenied": "The authentication was denied by the server. Please verify that you actually have the permissions necessary to use it.",
       "agentAnswerError": "I am currently unable to complete your request. You can try again and if the issue persists contact [support](mailto:{contactEmail}?subject=Tero%20issue)",
       "quotaExceeded": "You have reached the monthly usage quota. Contact [support](mailto:{contactEmail}?subject=Tero%20Monthly%20Limit) to increase your monthly quota or wait for the next month.",
       "starterText": "Hi! 👋 \n How can I help you?"
     },
     "es": {
-      "authenticationWindowClosed": "La ventana de autenticación se cerró antes de completar el proceso. Por favor, inténtelo de nuevo y mantenga abierta la ventana emergente de autenticación hasta que termine.",
+      "authenticationWindowBlocked": "No se pudo abrir la ventana de autenticación. Por favor, verifica que las ventanas emergentes estén permitidas para este sitio y vuelve a intentarlo.",
       "authenticationCancelled": "La autenticación fue cancelada. Por favor, inténtelo de nuevo y complete la autenticación para usar este agente o esta herramienta.",
-      "authenticationAccessDenied": "La autenticación fue denegada por el servidor MCP. Por favor, verifica que tengas los permisos necesarios para usarlo.",
+      "authenticationAccessDenied": "La autenticación fue denegada por el servidor. Por favor, verifica que tengas los permisos necesarios para usarlo.",
       "agentAnswerError": "Ahora no puedo completar tu pedido. Puedes intentar de nuevo y si el problema persiste contactar a [soporte](mailto:{contactEmail}?subject=Tero%20issue)",
       "quotaExceeded": "Ha alcanzado la cuota de uso mensual. Contacte a [soporte](mailto:{contactEmail}?subject=Tero%20Monthly%20Limit) para aumentar su cuota mensual o espere al próximo mes.",
       "starterText": "Hola! 👋 \n ¿Cómo puedo ayudarte?"

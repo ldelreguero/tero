@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     web_tool_google_cost_per_1k_searches_usd : float
     browser_tool_playwright_mcp_url : str
     browser_tool_playwright_output_dir : str
+    vllm_base_url : Optional[str] = None
+    vllm_api_key : Optional[SecretStr] = None
+    vllm_model_id_mapping : dict[str, str] = {}
     
     def is_local_env(self) -> bool:
         found = re.search('@([^/]+)(?:\\d+)?/', self.db_url)
@@ -89,7 +92,7 @@ class Settings(BaseSettings):
             ret[model_id] = AzureModelDeployment(deployment_name=deployment_parts[0], endpoint_index=int(deployment_parts[1]) if len(deployment_parts) > 1 else 0)
         return ret
     
-    @field_validator('aws_model_id_mapping', 'google_model_id_mapping', 'openai_model_id_mapping', mode='before')
+    @field_validator('aws_model_id_mapping', 'google_model_id_mapping', 'openai_model_id_mapping', 'vllm_model_id_mapping', mode='before')
     @classmethod
     def decode_model_id_mapping(cls, v: str) -> dict[str, str]:
         return {k: v for k, v in (pair.split(':', 1) for pair in v.split(','))} if v else {}

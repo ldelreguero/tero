@@ -172,9 +172,9 @@ const filteredFiles = computed(() => props.viewMode ? toolFiles.value.filter(f =
 <template>
   <div class="flex flex-col gap-4 my-1">
     <div ref="fileListRef" class="flex flex-col gap-2 max-h-55 overflow-y-auto">
-      <div class="flex flex-col gap-2 text-sm text-light-gray" v-if="!filteredFiles.length">{{ t('noUploadedFiles') }}</div>
+      <div class="flex flex-col gap-2 text-sm text-content-muted" v-if="!filteredFiles.length">{{ t('noUploadedFiles') }}</div>
       <div class="flex flex-col gap-2 text-sm" v-else>
-        <div v-for="(f, index) in filteredFiles" :key="index" class="border border-auxiliar-gray rounded-lg flex flex-row justify-between items-center p-2" :class="{ 'border-error-alt': f.status == FileStatus.ERROR }">
+        <div v-for="(f, index) in filteredFiles" :key="index" class="border rounded-lg flex flex-row justify-between items-center p-2" :class="{ 'border-error-alt': f.status == FileStatus.ERROR }">
           <div class="flex flex-row gap-2 items-center">
             <IconFileText />
             {{ truncateFileName(f.name) }}
@@ -183,10 +183,10 @@ const filteredFiles = computed(() => props.viewMode ? toolFiles.value.filter(f =
             <div v-if="(f.status == FileStatus.PENDING || isDeletingFile(f))"><IconLoader class="animate-spin"/></div>
             <div v-if="f.status == FileStatus.ERROR && !isDeletingFile(f)" class="flex flex-row items-center gap-2 cursor-default" v-tooltip.bottom="t('errorUploadingFileTooltip')"><IconAlertTriangle class="text-error-alt" /> {{ t('errorUploadingFile') }}</div>
             <div v-if="f.status == FileStatus.QUOTA_EXCEEDED && !isDeletingFile(f)" class="flex flex-row items-center gap-2 cursor-default" v-tooltip.bottom="t('quotaExceededTooltip', { support: contactEmail })"><IconAlertTriangle class="text-error-alt" /> {{ t('quotaExceeded') }}</div>
-            <div v-if="!isDeletingFile(f)" class="flex flex-row gap-2 border-l border-auxiliar-gray pl-2">
-              <InteractiveIcon v-if="f.status == FileStatus.PROCESSED || f.status == FileStatus.QUOTA_EXCEEDED" @click="viewFile(f)" v-tooltip.bottom="t('viewFileTooltip')" :icon="IconEye"/>
-              <InteractiveIcon v-if="(f.status == FileStatus.ERROR || f.status == FileStatus.QUOTA_EXCEEDED)" @click="tryAgainFileUpload(f)" v-tooltip.bottom="t('tryAgainTooltip')" :icon="IconRefresh"/>
-              <InteractiveIcon v-if="f.status != FileStatus.PENDING && !viewMode" @click="removeFile(f)" v-tooltip.bottom="t('removeFileTooltip')" :icon="IconTrash"/>
+            <div v-if="!isDeletingFile(f)" class="flex flex-row gap-2 border-l pl-2">
+              <SimpleIcon interactive v-if="f.status == FileStatus.PROCESSED || f.status == FileStatus.QUOTA_EXCEEDED" @click="viewFile(f)" v-tooltip.bottom="t('viewFileTooltip')" :icon="IconEye"/>
+              <SimpleIcon interactive v-if="(f.status == FileStatus.ERROR || f.status == FileStatus.QUOTA_EXCEEDED)" @click="tryAgainFileUpload(f)" v-tooltip.bottom="t('tryAgainTooltip')" :icon="IconRefresh"/>
+              <SimpleIcon interactive v-if="f.status != FileStatus.PENDING && !viewMode" @click="removeFile(f)" v-tooltip.bottom="t('removeFileTooltip')" :icon="IconTrash"/>
             </div>
           </div>
         </div>

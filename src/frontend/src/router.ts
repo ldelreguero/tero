@@ -70,6 +70,10 @@ const router = createRouter({
       component: () => import('@/pages/ToolAuthPage.vue'),
     },
     {
+      path: '/tools/:toolId/agents/:agentId/auth-token',
+      component: () => import('@/pages/AuthTokenPage.vue'),
+    },
+    {
       path: '/agents/:agentId',
       component: () => import('@/pages/AgentEditorPage.vue'),
       meta: {

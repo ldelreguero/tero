@@ -131,3 +131,8 @@ class UpdateTestCase(BaseModel):
 
 class RunTestSuiteRequest(BaseModel):
     test_case_ids: Optional[List[int]] = None
+
+
+class CreateTestCase(CamelCaseModel):
+    from_thread_id: Optional[int] = None
+    branch_message_id: Optional[int] = None

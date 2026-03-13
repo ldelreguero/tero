@@ -21,7 +21,7 @@ const disclaimer = computed(() => {
 
 <template>
   <Dialog v-model:visible="visible" :modal="true" :draggable="false" :resizable="false" :closable="false" class="basic-dialog">
-    <div class="flex flex-col gap-4 bg-white rounded-xl p-4 pt-6"> 
+    <div class="flex flex-col gap-4 bg-surface rounded-xl p-4 pt-6"> 
       <span v-html="disclaimer" class="w-full whitespace-pre-line"></span>
       <div class="flex flex-row gap-2 items-center justify-end">
         <SimpleButton @click="visible = false" shape="square">{{ t('cancel') }}</SimpleButton>

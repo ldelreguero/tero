@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Any
 from sqlmodel import not_, select, func, desc, distinct, and_, col, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -143,7 +143,6 @@ class UsageRepository:
                 col(Agent.id).label("agent_id"),
                 col(Agent.name).label("agent_name"),
                 col(Agent.icon).label("icon"),
-                col(Agent.icon_bg_color).label("icon_bg_color"),
                 col(Team.id).label("team_id"),
                 col(Team.name).label("team_name"),
                 col(User.name).label("author_name"),
@@ -164,7 +163,6 @@ class UsageRepository:
                 col(Agent.id),
                 col(Agent.name),
                 col(Agent.icon),
-                col(Agent.icon_bg_color),
                 col(Agent.team_id),
                 col(Team.id),
                 col(Team.name),
@@ -185,7 +183,6 @@ class UsageRepository:
                 combined_query.c.agent_id,
                 combined_query.c.agent_name,
                 combined_query.c.icon,
-                combined_query.c.icon_bg_color,
                 combined_query.c.team_id,
                 combined_query.c.team_name,
                 combined_query.c.author_name,
@@ -220,7 +217,6 @@ class UsageRepository:
                 previous_active_users=row.previous_active_users,
                 previous_minutes_saved=row.previous_minutes_saved,
                 icon_bytes=row.icon,
-                icon_bg_color=row.icon_bg_color,
                 team=Team(id=row.team_id, name=row.team_name) if row.team_id else None,
                 author_name=row.author_name,
                 is_external_agent=row.is_external_agent
@@ -241,7 +237,6 @@ class UsageRepository:
             literal_column("-1").label("agent_id"),
             literal_column("NULL").label("agent_name"),
             literal_column("NULL").label("icon"),
-            literal_column("NULL").label("icon_bg_color"),
             literal_column("NULL").label("team_id"),
             literal_column("NULL").label("team_name"),
             literal_column("NULL").label("author_name"),
@@ -262,7 +257,6 @@ class UsageRepository:
                 col(ExternalAgent.id).label("agent_id"),
                 col(ExternalAgent.name).label("agent_name"),
                 col(ExternalAgent.icon).label("icon"),
-                literal_column("NULL").label("icon_bg_color"),
                 literal_column(str(GLOBAL_TEAM_ID)).label("team_id"),
                 (select(Team.name).where(Team.id == GLOBAL_TEAM_ID).scalar_subquery()).label("team_name"),
                 literal_column("NULL").label("author_name"),
@@ -470,7 +464,6 @@ class UsageRepository:
                 col(Agent.id).label("agent_id"),
                 col(Agent.name).label("agent_name"),
                 col(Agent.icon).label("icon"),
-                col(Agent.icon_bg_color).label("icon_bg_color"),
                 col(Team.id).label("team_id"),
                 col(Team.name).label("team_name"),
                 col(User.name).label("author_name"),
@@ -490,7 +483,6 @@ class UsageRepository:
                 col(Agent.id),
                 col(Agent.name),
                 col(Agent.icon),
-                col(Agent.icon_bg_color),
                 col(Agent.team_id),
                 col(Team.id),
                 col(Team.name),
@@ -509,7 +501,6 @@ class UsageRepository:
                 combined_query.c.agent_id,
                 combined_query.c.agent_name,
                 combined_query.c.icon,
-                combined_query.c.icon_bg_color,
                 combined_query.c.team_id,
                 combined_query.c.team_name,
                 combined_query.c.author_name,
@@ -543,7 +534,6 @@ class UsageRepository:
                 previous_active_users=row.previous_active_users,
                 previous_total_threads=row.previous_total_threads,
                 icon_bytes=row.icon,
-                icon_bg_color=row.icon_bg_color,
                 team=Team(id=row.team_id, name=row.team_name) if row.team_id else None,
                 author_name=row.author_name
             )
@@ -562,7 +552,6 @@ class UsageRepository:
             literal_column("-1").label("agent_id"),
             literal_column("NULL").label("agent_name"),
             literal_column("NULL").label("icon"),
-            literal_column("NULL").label("icon_bg_color"),
             literal_column("NULL").label("team_id"),
             literal_column("NULL").label("team_name"),
             literal_column("NULL").label("author_name"),

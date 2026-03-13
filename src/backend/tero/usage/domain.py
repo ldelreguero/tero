@@ -105,7 +105,6 @@ class AgentItem(CamelCaseModel):
     agent_id: Optional[int] = None
     agent_name: Optional[str] = None
     icon_bytes: Optional[bytes] = Field(exclude=True)
-    icon_bg_color: Optional[str]
     team: Optional[Team] = None
     author_name: Optional[str] = None
     active_users: int

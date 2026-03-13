@@ -34,6 +34,11 @@ class TestCaseRepository:
         ret = await self._db.exec(stmt)
         return list(ret.all())
 
+    async def count_by_agent(self, agent_id: int) -> int:
+        stmt = select(func.count()).select_from(TestCase).where(TestCase.agent_id == agent_id)
+        ret = await self._db.exec(stmt)
+        return ret.one() or 0
+
     async def find_empty_test_case(self, agent_id: int) -> Optional[TestCase]:
         stmt = (
             select(TestCase)

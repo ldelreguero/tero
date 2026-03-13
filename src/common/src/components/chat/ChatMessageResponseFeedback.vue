@@ -85,25 +85,25 @@ watch(props.message, (newMessage:ChatUiMessage) => {
 <template>
   <div :class="`${!actionsEnabled ? 'invisible' : ''}`" class="flex min-h-[30px]">
     <div class="flex w-full justify-end">
-      <div v-if="minutesSaved != null" class="flex items-center border-1 border-auxiliar-gray rounded-xl">
+      <div v-if="minutesSaved != null" class="flex items-center border-1 rounded-xl">
         <div v-if="!feedbackMesssage" class="flex items-center gap-3 pl-3 p-2">
-          <span class="text-dark-gray text-sm"> {{ t('responseSavedMessage') }} <span class="font-medium">{{minutesSaved}} {{ t(minutesSaved != 1 ? 'minutes':'minute')}}</span></span>
+          <span class="text-content text-sm"> {{ t('responseSavedMessage') }} <span class="font-medium">{{minutesSaved}} {{ t(minutesSaved != 1 ? 'minutes':'minute')}}</span></span>
           <div v-if="message.hasPositiveFeedback == null" class="flex items-center gap-2">
-            <InteractiveIcon class="!text-dark-gray" :icon="IconThumbUp" v-tooltip.bottom="t('thumbsUpButton')" @click="handleToggleFeedback($event, true)"/>
-            <InteractiveIcon class="!text-dark-gray" :icon="IconThumbDown" v-tooltip.bottom="t('thumbsDownButton')" @click="handleToggleFeedback($event, false)"/>
+            <SimpleIcon interactive class="!text-content" :icon="IconThumbUp" v-tooltip.bottom="t('thumbsUpButton')" @click="handleToggleFeedback($event, true)"/>
+            <SimpleIcon interactive class="!text-content" :icon="IconThumbDown" v-tooltip.bottom="t('thumbsDownButton')" @click="handleToggleFeedback($event, false)"/>
           </div>
           <div v-else class="flex items-center gap-2">
             <IconLoader v-if="isFeedbackLoading" class="!text-abstracta animate-spin"/>
-            <InteractiveIcon v-else-if="message.hasPositiveFeedback" class="!text-abstracta"
+            <SimpleIcon interactive v-else-if="message.hasPositiveFeedback" class="!text-abstracta"
               :icon="IconThumbUpFilled" v-tooltip.bottom="t('removeFeedbackButton')" @click="handleRemoveFeedback()"/>
-            <InteractiveIcon v-else class="!text-abstracta" 
+            <SimpleIcon interactive v-else class="!text-abstracta" 
               :icon="IconThumbDownFilled" v-tooltip.bottom="t('removeFeedbackButton')" @click="handleRemoveFeedback()"/>
           </div>
         </div>
         <div v-else class="flex items-center h-6 px-3 py-5">
-          <span class="text-dark-gray text-sm"> {{ feedbackMesssage }}</span>
+          <span class="text-content text-sm"> {{ feedbackMesssage }}</span>
         </div>
-        <div v-if="message.stopped" class="flex items-center gap-2 border-l-1 border-auxiliar-gray p-2">
+        <div v-if="message.stopped" class="flex items-center gap-2 border-l-1 p-2 rounded-xl overflow-auto">
           <IconAlertTriangleFilled v-tooltip.bottom="t('stoppedMessage')" class="text-warn"/>
         </div>
         <Popover ref="feedbackPopRef" class="shadow-light" id="feedback-popover">

@@ -52,7 +52,7 @@ const handleMenuToggle = (event: Event) => {
 <template>
   <div class="flex items-center">
     <SimpleButton class="rounded-lg" variant="muted" size="small" @click.prevent="handleMenuToggle($event)">
-      <IconDots stroke-width="2" :class="isMenuOpen ? 'text-abstracta' : 'text-light-gray'" />
+      <IconDots stroke-width="2" :class="isMenuOpen ? 'text-abstracta' : 'text-content-muted'" />
     </SimpleButton>
     <Menu ref="menu" :model="items" :popup="true" @show="isMenuOpen = true" @hide="handleCloseMenu" @keydown.esc="handleCloseMenu">
       <template #item="{ item }">

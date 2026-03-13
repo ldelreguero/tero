@@ -59,10 +59,10 @@ const fileIsPdf = computed(() => {
 
 const backgroundClasses = computed(() => {
   if (!fileIsPdf.value) {
-    return 'border-l-[.2px] border-auxiliar-gray'
+    return 'border-l-[.2px]'
   }
   if (browserIsChrome.value) {
-    return 'border-l-10 border-l-auxiliar-gray'
+    return 'border-l-10'
   }
   return undefined
 })
@@ -212,7 +212,7 @@ const awaitFileProcessingCompletes = async (toolFile: DocToolFile) => {
       </div>
     </div>
     <template v-else>
-      <div class="bg-surface border-b-[.2px] border-auxiliar-gray flex items-center justify-between px-4 py-3 flex-shrink-0">
+      <div class="bg-surface border-b-[.2px] flex items-center justify-between px-4 py-3 flex-shrink-0">
         <p>{{ fileName }}</p>
         <div class="flex items-center gap-2">
           <SimpleButton v-if="fileIsPdf && canReprocess" @click="reprocess" :disabled="reprocessing || quotaExceeded" v-tooltip.bottom="!reprocessing && (quotaExceeded ? quotaExceededMessage : lastUsedProcessor == FileProcessor.BASIC ? t('reprocessWithAITooltip') : t('reprocessWithBasicTooltip'))">
@@ -232,7 +232,7 @@ const awaitFileProcessingCompletes = async (toolFile: DocToolFile) => {
               <div v-if="fileIsNotPreviewable" class="flex flex-col items-center justify-center text-center translate-y-5/6">
                 <IconFileText class="w-16 h-16 mb-4" />
                 <h3 class="text-lg font-medium mb-2">{{ t('filePreviewNotAvailable') }}</h3>
-                <p class="text-light-gray mb-4">{{ t('filePreviewDescription') }}</p>
+                <p class="text-content-muted mb-4">{{ t('filePreviewDescription') }}</p>
                 <SimpleButton @click="downloadFile" shape="square">
                   {{ t('downloadFile') }}
                 </SimpleButton>

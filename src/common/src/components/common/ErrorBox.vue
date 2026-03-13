@@ -54,7 +54,7 @@ watch(
           <IconAlertTriangle class="text-error-alt flex-shrink-0 mr-2 h-7 w-7" />
           {{ error.title }}
         </div>
-        <div class="py-2 text-light-gray">{{ error.message }}</div>
+        <div class="py-2 text-content-muted">{{ error.message }}</div>
       </div>
     </div>
   </Animate>

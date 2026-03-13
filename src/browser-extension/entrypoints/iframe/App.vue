@@ -15,6 +15,7 @@ import { AuthService } from '~/utils/auth'
 import ToastMessage from '~/components/ToastMessage.vue'
 import CopilotChat from '~/components/CopilotChat.vue'
 import CopilotList from '~/components/CopilotList.vue'
+import 'highlight.js/styles/stackoverflow-light.css'
 
 const toast = useToast()
 const { t } = useI18n()
@@ -291,7 +292,7 @@ const onNewChat = async () => {
 }
 
 const sidebarClasses = computed(() => [
-  'fixed flex flex-col bg-surface border border-auxiliar-gray',
+  'fixed flex flex-col bg-surface border',
   isMinimized.value
     ? 'bottom-4 right-4 rounded-full shadow-lg cursor-pointer hover:shadow-xl transition-shadow'
     : 'm-2 -left-2 w-full h-[calc(100%-16px)] rounded-tl-3xl rounded-bl-3xl'

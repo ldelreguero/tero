@@ -50,12 +50,12 @@ watch(visible, (_) => {
       </template>
       <div class="mb-4 w-150 min-h-28">
         <div v-if="uploadedFiles.length > 0" class="flex flex-col gap-4">
-          <div class="border border-auxiliar-gray rounded-lg flex flex-row justify-between items-center p-2">
+          <div class="border rounded-lg flex flex-row justify-between items-center p-2">
             <div class="flex flex-row gap-2 items-center">
               <IconFileText />
               {{ truncateFileName(uploadedFiles[0].name) }}
             </div>
-            <InteractiveIcon @click="removeFile()" :icon="IconX"/>
+            <SimpleIcon interactive @click="removeFile()" :icon="IconX"/>
           </div>
           <div class="flex flex-row gap-4 justify-between">
             <div class="flex flex-row gap-2 items-center w-100 text-sm">

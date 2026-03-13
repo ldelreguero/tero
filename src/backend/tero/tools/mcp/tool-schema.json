@@ -6,8 +6,51 @@
       "type": "string",
       "format": "uri",
       "description": "The MCP server SSE URL"
+    },
+    "authType": {
+      "type": "string",
+      "enum": ["oauth", "bearerToken"],
+      "default": "oauth"
+    },
+    "bearerToken": {
+      "type": "string",
+      "writeOnly": true,
+      "description": "Bearer token value (required when authType is 'bearerToken')",
+      "dependencies": {
+        "authType": {
+          "const": "bearerToken"
+        }
+      }
     }
   },
-  "required": ["serverUrl"],
+  "required": ["serverUrl", "authType"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "authType": {
+            "const": "bearerToken"
+          }
+        }
+      },
+      "then": {
+        "required": ["serverUrl", "authType", "bearerToken"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "authType": {
+            "const": "oauth"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": ["bearerToken"]
+        }
+      }
+    }
+  ],
   "additionalProperties": false
 }

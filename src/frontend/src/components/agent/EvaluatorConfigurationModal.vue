@@ -82,7 +82,7 @@ const onSave = () => {
     class="w-200"
   >
     <template #header>
-      <div class="flex flex-col gap-2 w-full border-b border-auxiliar-gray pb-4">
+      <div class="flex flex-col gap-2 w-full border-b pb-4">
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-2">
             <IconSearch />
@@ -90,7 +90,7 @@ const onSave = () => {
           </div>
           <SimpleButton @click="onClose"><IconX /></SimpleButton>
         </div>
-        <p v-if="testCaseId" class="text-sm text-light-gray">{{ t('testCaseEvaluatorNote') }}</p>
+        <p v-if="testCaseId" class="text-sm text-content-muted">{{ t('testCaseEvaluatorNote') }}</p>
       </div>
     </template>
     <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">

@@ -34,7 +34,7 @@ const showAgentInfo = () => {
 </script>
 
 <template>
-  <div class="grid-card px-3 py-2.5 border border-auxiliar-gray hover:shadow-sm cursor-pointer" @click="startChat">
+  <div class="grid-card px-3 py-2.5 border hover:shadow-sm cursor-pointer" @click="startChat">
     <div v-if="showTeamBadge && agent.team" class="absolute top-[-0.75rem] right-3">
       <SimpleTag :text="agent.team.name" />
     </div>
@@ -43,7 +43,7 @@ const showAgentInfo = () => {
         <AgentAvatar :agent="agent" />
         <div class="flex flex-col min-w-0 flex-1">
           <span class="truncate block">{{ agent.name }}</span>
-          <span v-if="agent.user && agent.team" class="text-light-gray text-xs truncate">{{ t('by') }} <span class="font-medium">{{ agent.user.name }}</span></span>
+          <span v-if="agent.user && agent.team" class="text-content-muted text-xs truncate">{{ t('by') }} <span class="font-medium">{{ agent.user.name }}</span></span>
         </div>
       </div>
     </div>
@@ -62,7 +62,7 @@ const showAgentInfo = () => {
           <IconArrowUpRight class="w-5 h-5" />
         </a>
       </div>
-      <div class="text-light-gray">
+      <div class="text-content-muted">
         <template v-if="agent.team">
           <div v-tooltip.bottom="t('activeUsersTooltip')" class="flex flex-row gap-2 items-center">
             <IconUsers class="w-5 h-5" />
