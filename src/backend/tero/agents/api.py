@@ -20,7 +20,7 @@ from ..files.parser import add_encoding_to_content_type
 from ..files.repos import FileRepository
 from ..teams.domain import GLOBAL_TEAM_ID, Role
 from ..tools.core import AgentTool
-from ..tools.oauth import ToolOAuthRequest, build_tool_oauth_request_http_exception
+from ..tools.auth import ToolAuthRequestException, build_tool_auth_request_http_exception
 from ..tools.repos import ToolRepository
 from ..users.domain import User
 from ..users.repos import UserRepository
@@ -173,13 +173,13 @@ async def configure_agent_tool(agent_id: int, tool_config: PublicAgentTool,
     tool.configure(agent, user.id, tool_config.config, db)
     try:
         prev_config = await AgentToolConfigRepository(db).find_by_ids(agent_id, tool.id, include_drafts=True)
-        tool_config.config = await tool.setup(prev_config)
-        await _save_tool_config(agent_id, tool.id, tool_config, draft=False, db=db)
+        await tool.setup(prev_config)
+        await _save_tool_config(agent_id, tool, tool_config.tool_id, draft=False, db=db)
         return tool_config
-    except ToolOAuthRequest as e:
+    except ToolAuthRequestException as e:
         # To be able to complete authentication we need to save the tool config
-        await _save_tool_config(agent_id, tool.id, tool_config, draft=True, db=db)
-        raise build_tool_oauth_request_http_exception(e)
+        await _save_tool_config(agent_id, tool, tool_config.tool_id, draft=True, db=db)
+        raise build_tool_auth_request_http_exception(e.request)
     except Exception:
         logger.error(f"Invalid tool configuration {agent_id} {tool_config.tool_id} {tool_config.config}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid tool configuration")
@@ -189,14 +189,14 @@ def _find_agent_tool(tool_id: str) -> Optional[AgentTool]:
     return ToolRepository().find_by_id(tool_id)
 
 
-async def _save_tool_config(agent_id: int, tool_id: str, tool_config: PublicAgentTool, draft: bool, db: AsyncSession):
+async def _save_tool_config(agent_id: int, tool: AgentTool, prev_tool_id: str, draft: bool, db: AsyncSession):
     repo = AgentToolConfigRepository(db)
     await repo.delete_drafts(agent_id)
     # this happens when tool id has a wildcard and the definitive tool id is defined when tool.configure is called
     # we need to delete the old tool config since the tool id may have changed when tool.configure was invoked
-    if tool_id != tool_config.tool_id:
-        await repo.delete(agent_id, tool_config.tool_id)
-    await repo.add(AgentToolConfig(agent_id=agent_id, tool_id=tool_id, config=tool_config.config, draft=draft))
+    if tool.id != prev_tool_id:
+        await repo.delete(agent_id, prev_tool_id)
+    await repo.add(AgentToolConfig(agent_id=agent_id, tool_id=tool.id, config=tool.config, draft=draft))
 
 
 @router.get(AGENT_TOOLS_PATH)

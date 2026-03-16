@@ -6,6 +6,7 @@ from .azure_provider import AzureProvider
 from .domain import AiModelProvider
 from .google_provider import GoogleProvider
 from .openai_provider import OpenAIProvider
+from .vllm_provider import VllmAiProvider
 
 
 providers: list[AiModelProvider] = []
@@ -17,6 +18,8 @@ if env.aws_access_key_id and env.aws_secret_access_key:
     providers.append(AWSProvider())
 if env.google_api_key:
     providers.append(GoogleProvider())
+if env.vllm_base_url and env.vllm_api_key:
+    providers.append(VllmAiProvider())
 
 
 def get_provider(model: str) -> AiModelProvider:

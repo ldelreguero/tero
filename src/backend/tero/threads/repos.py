@@ -75,6 +75,7 @@ class ThreadRepository:
         merged_thread = await self._db.merge(thread)
         await self._db.commit()
         await self._db.refresh(merged_thread)
+        return merged_thread
 
     async def find_empty_thread(self, agent_id: int, user_id: int) -> Optional[Thread]:
         stmt = (

@@ -48,7 +48,7 @@ defineExpose({
       variant="muted"
       size="small"
       @click.stop.prevent="toggle">
-      <IconDots stroke-width="2" :class="!isMenuOpen ? 'text-light-gray' : 'text-abstracta'" />
+      <IconDots stroke-width="2" :class="!isMenuOpen ? 'text-content-muted' : 'text-abstracta'" />
     </SimpleButton>
 
     <Menu

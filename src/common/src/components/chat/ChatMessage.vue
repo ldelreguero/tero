@@ -180,20 +180,13 @@ const handleEditMessageCancel = () => {
 }
 
 const onEditSubmit = () => {
-  if (!editingMessageText.value.trim()) {
-    editingMessageTextError.value = t('fieldRequiredError')
-    return
-  }
   emit('editMessage', editingMessageText.value, attachedEditFiles.value)
   showEditingMessage.value = false
 }
 
 const onKeyDown = (event: KeyboardEvent) => {
   editingMessageTextError.value = null
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault()
-    onEditSubmit()
-  } else if (event.key == 'Escape') {
+  if (event.key == 'Escape') {
     handleEditMessageCancel()
   }
 }
@@ -214,7 +207,7 @@ const handleNextMessage = () => {
 <template>
   <div class="p-2 py-3 formatted-text">
     <div v-if="message.isUser" class="flex flex-col items-end gap-2 justify-end">
-      <div class="flex gap-4 rounded-xl justify-self-end overflow-hidden" :class="`${showEditingMessage ? 'w-full border-1 border-auxiliar-gray py-3 px-4' : 'bg-pale max-w-3/4 p-4'}`">
+      <div class="flex gap-4 rounded-xl justify-self-end overflow-hidden" :class="`${showEditingMessage ? 'w-full border-1 py-3 px-4' : 'bg-surface-muted max-w-3/4 p-4'}`">
         <div v-if="!showEditingMessage" class="overflow-x-auto">
           <div class="break-words" v-html="message.text ? escapeHtml(message.text).replace(/\n/g, '<br/>') : ''"></div>
           <div v-if="message.files && message.files.length" class="mt-2">
@@ -223,7 +216,7 @@ const handleNextMessage = () => {
         </div>
         <div v-else class="flex flex-col gap-3 w-full">
           <div class="relative">
-            <ChatInput ref="editInputRef" v-model="editingMessageText" :initial-files="attachedEditFiles" @files-change="handleEditFileChange" @keydown="onKeyDown" 
+            <ChatInput ref="editInputRef" v-model="editingMessageText" :initial-files="attachedEditFiles" @files-change="handleEditFileChange" @keydown="onKeyDown" @send="onEditSubmit"
               :chat="{
                 findPrompts: async () => [],
                 savePrompt: async () => {},
@@ -239,7 +232,7 @@ const handleNextMessage = () => {
                   <SimpleButton @click="handleEditMessageCancel" shape="square" variant="secondary">
                     {{ t('cancelButton') }}
                   </SimpleButton>
-                  <SimpleButton @click="onEditSubmit" variant="primary" shape="square">
+                  <SimpleButton @click="onEditSubmit" variant="primary" shape="square" :disabled="!editingMessageText.trim()">
                     {{ t('sendButton') }}
                   </SimpleButton>
                 </div>
@@ -249,12 +242,12 @@ const handleNextMessage = () => {
         </div>
       </div>
       <div v-if="!showEditingMessage" class="flex gap-2" :class="!actionsEnabled ? 'invisible' : ''">
-        <InteractiveIcon v-tooltip.bottom="t('editMessageButton')" @click="handleShowEditMessage(message.text!)" :icon="IconEditCircle" />
-        <InteractiveIcon v-tooltip.bottom="t('createPromptButton')" @click="emit('promptCreate', message.text)" :icon="IconSquareRoundedPlus" />
+        <SimpleIcon interactive v-tooltip.bottom="t('editMessageButton')" @click="handleShowEditMessage(message.text!)" :icon="IconEditCircle" />
+        <SimpleIcon interactive v-tooltip.bottom="t('createPromptButton')" @click="emit('promptCreate', message.text)" :icon="IconSquareRoundedPlus" />
         <div v-if="siblingsCount > 1" class="flex items-center justify-end">
-          <InteractiveIcon :icon="IconChevronLeft" :class="selectedIndex == 0 ? '!text-auxiliar-gray hover:!text-auxiliar-gray !cursor-default' : ''" @click="handlePreviousMessage" />
+          <SimpleIcon interactive :icon="IconChevronLeft" :class="selectedIndex == 0 ? '!text-content-muted hover:!text-content-muted !cursor-default' : ''" @click="handlePreviousMessage" />
           <span>{{ selectedIndex + 1 }}/{{ siblingsCount }}</span>
-          <InteractiveIcon :icon="IconChevronRight" :class="selectedIndex + 1 == siblingsCount ? '!text-auxiliar-gray hover:!text-auxiliar-gray !cursor-default' : ''" @click="handleNextMessage" />
+          <SimpleIcon interactive :icon="IconChevronRight" :class="selectedIndex + 1 == siblingsCount ? '!text-content-muted hover:!text-content-muted !cursor-default' : ''" @click="handleNextMessage" />
         </div>
       </div>
     </div>
@@ -270,11 +263,13 @@ const handleNextMessage = () => {
       <div v-if="message.files && message.files.length" class="mt-2">
         <ChatAttachments variant="message" :message-id="message.id" :attached-files="message.files" style="max-width: 80vw" @view-file="emit('viewFile', $event)" />
       </div>
-      <ChatMessageResponseFeedback v-if="isLastMessage && !isEditingAgent" :message="message" :actions-enabled="actionsEnabled" :is-feedback-loading="isFeedbackLoading" @feedback-change="emit('feedbackChange', $event)" />
-      <div v-else-if="message.stopped" class="flex flex-col items-end gap-2" :class="!actionsEnabled ? 'invisible' : ''">
-        <div class="flex items-center gap-2 border-1 border-auxiliar-gray rounded-xl px-3 py-2 text-sm text-dark-gray">
-          <IconAlertTriangleFilled class="text-warn" />
-          {{ t('stoppedMessage') }}
+      <div class="flex justify-end items-center">
+        <ChatMessageResponseFeedback v-if="isLastMessage && !isEditingAgent" :message="message" :actions-enabled="actionsEnabled" :is-feedback-loading="isFeedbackLoading" @feedback-change="emit('feedbackChange', $event)" />
+        <div v-else-if="message.stopped" class="flex flex-col items-end gap-2" :class="!actionsEnabled ? 'invisible' : ''">
+          <div class="flex items-center gap-2 border-1 rounded-xl px-3 py-2 text-sm text-content">
+            <IconAlertTriangleFilled class="text-warn" />
+            {{ t('stoppedMessage') }}
+          </div>
         </div>
       </div>
     </div>
@@ -290,7 +285,6 @@ const handleNextMessage = () => {
     "cancelButton": "Cancel",
     "copyCodeButton": "Copy code",
     "copiedMessage": "Copied!",
-    "fieldRequiredError": "This field is required",
     "stoppedMessage": "You stopped the response generation."
   },
   "es": {
@@ -300,7 +294,6 @@ const handleNextMessage = () => {
     "cancelButton": "Cancelar",
     "copyCodeButton": "Copiar código",
     "copiedMessage": "Copiado!",
-    "fieldRequiredError": "Este campo es requerido",
     "stoppedMessage": "Detuviste la generación de la respuesta."
   }
 }

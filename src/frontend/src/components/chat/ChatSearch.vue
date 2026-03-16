@@ -47,9 +47,9 @@ const handleChatClick = (chat: Thread) => {
             <div class="flex items-center gap-2">
                 <div class="flex-grow relative">
                     <IconLoader v-if="isSearching"
-                        class="absolute left-3 top-1/2 -translate-y-1/2 text-light-gray animate-spin" />
-                    <IconSearch v-else class="absolute top-1/2 -translate-y-1/2 left-3 text-light-gray" />
-                    <input v-model="searchVal" class="pl-11 w-full border-1 border-auxiliar-gray rounded-lg px-3 py-3"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted animate-spin" />
+                    <IconSearch v-else class="absolute top-1/2 -translate-y-1/2 left-3 text-content-muted" />
+                    <input v-model="searchVal" class="pl-11 w-full border-1 rounded-lg px-3 py-3"
                         :placeholder="t('searchChatPlaceholder', { agentName: props.agent.name || '' })" />
                 </div>
                 <SimpleButton @click="emit('close')">
@@ -58,18 +58,18 @@ const handleChatClick = (chat: Thread) => {
             </div>
         </template>
         <div v-if="isLoading" class="flex justify-center">
-            <IconLoader class="text-light-gray animate-spin" />
+            <IconLoader class="text-content-muted animate-spin" />
         </div>
         <div v-else>
             <div v-if="chats.length > 0" class="flex flex-col max-h-[250px] overflow-y-auto">
                 <div v-for="chat in chats">
-                    <ListItem class="mb-1" :class="currentChat.id == chat.id ? 'bg-pale' : ''"
+                    <ListItem class="mb-1" :class="currentChat.id == chat.id ? 'bg-surface-muted' : ''"
                         @click="handleChatClick(chat)">
                         {{ chat.name }}
                     </ListItem>
                 </div>
             </div>
-            <div class="p-3 text-light-gray" v-else>
+            <div class="p-3 text-content-muted" v-else>
                 {{ t('noChats') }}
             </div>
         </div>

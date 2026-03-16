@@ -112,9 +112,12 @@ async def get_current_user(token: Annotated[Optional[str], Depends(auth_scheme)]
             raise _build_auth_exception()
         user_repo = UserRepository(db)
         ret = await user_repo.find_by_username(username)
-        if ret and ret.deleted_at:
+        if ret and not ret.is_active():
             raise _build_auth_exception()
         if not ret:
+            deleted_user = await user_repo.find_by_username_include_deleted(username)
+            if deleted_user:
+                raise _build_auth_exception()
             ret = await user_repo.create_user(User(username=username, name=name, monthly_usd_limit=env.monthly_usd_limit_default))
         elif not ret.name and name:
             ret.name = name

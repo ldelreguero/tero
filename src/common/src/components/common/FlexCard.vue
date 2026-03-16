@@ -24,10 +24,10 @@ const isInSidebar = computed(() => {
 
 </script>
 <template>
-    <div class="bg-surface h-full w-full flex flex-col rounded-2xl border border-auxiliar-gray shadow-sm" :class="{ 'px-4': !hasBgCover() }">
+    <div class="bg-surface h-full w-full flex flex-col rounded-2xl border shadow-sm" :class="{ 'px-4': !hasBgCover() }">
         <div class="flex flex-col h-full">
             <div
-                class="border-b border-auxiliar-gray"
+                class="border-b"
                 :class="[{ 'py-4': !hasBgCover() }, { 'mb-4': !isInSidebar }, headerClass]"
                 :style="{ height: headerHeight }"
                 ref="headerContent">

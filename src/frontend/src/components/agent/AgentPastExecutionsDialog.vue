@@ -90,7 +90,7 @@ onMounted(() => {
         <div v-if="isLoading" class="animate-pulse space-y-2 flex flex-col gap-2 py-4">
           <div v-for="n in 6" :key="n" class="flex flex-col bg-auxiliar-gray rounded animate-pulse w-full h-10"></div>
         </div>
-        <div v-else-if="executions.length === 0" class="flex flex-col items-center justify-center py-8 text-light-gray">
+        <div v-else-if="executions.length === 0" class="flex flex-col items-center justify-center py-8 text-content-muted">
           <IconHistory size="48" class="mb-4 opacity-50" />
           <span>{{ t('noPastExecutions') }}</span>
         </div>
@@ -106,7 +106,7 @@ onMounted(() => {
             </Animate>
             <div
               v-else
-              class="flex flex-row items-center justify-between px-4 py-2 cursor-pointer hover:bg-pale transition-colors rounded-lg"
+              class="flex flex-row items-center justify-between px-4 py-2 cursor-pointer hover:bg-surface-muted transition-colors rounded-lg"
               @click="emit('selectExecution', execution)"
             >
               <span>{{ moment(execution.executedAt).format('D MMM YYYY HH:mm') }}</span>

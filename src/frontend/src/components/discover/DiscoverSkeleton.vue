@@ -8,7 +8,7 @@ const SKELETON_COUNT = props.count || 9;
 
 <template>
   <template v-for="i in SKELETON_COUNT" :key="i">
-    <div class="grid-card bg-pale px-3 py-2.5 animate-pulse">
+    <div class="grid-card bg-surface-muted px-3 py-2.5 animate-pulse">
       <div class="h-4 bg-auxiliar-gray rounded w-3/4 mb-2"></div>
       <div class="h-3 bg-auxiliar-gray rounded w-1/2 mb-4"></div>
       <div class="mt-auto flex justify-between items-center">

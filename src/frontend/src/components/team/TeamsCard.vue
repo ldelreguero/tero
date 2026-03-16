@@ -49,7 +49,7 @@ const filteredTeams = computed(() => {
 
 <template>
     <div class="w-full h-full" v-if="loading">
-      <div class="w-full bg-pale rounded-lg p-4 animate-pulse h-full">
+      <div class="w-full bg-surface-muted rounded-lg p-4 animate-pulse h-full">
         <div class="h-5 bg-auxiliar-gray rounded w-32 mb-4"></div>
         <div>
           <div v-for="i in 10" :key="i" class="flex justify-between items-center py-2">
@@ -80,7 +80,7 @@ const filteredTeams = computed(() => {
         <Column class="w-16">
             <template #body="slotProps">
                 <div class="w-full flex justify-end items-center gap-2" >
-                  <IconPinned v-if="slotProps.data.id === GLOBAL_TEAM_ID" size="20" class="text-light-gray rotate-45" />
+                  <IconPinned v-if="slotProps.data.id === GLOBAL_TEAM_ID" size="20" class="text-content-muted rotate-45" />
                   <TeamMenu
                     :team="slotProps.data"
                     @edit-team="onEditTeam(slotProps.data.id)"
@@ -90,7 +90,7 @@ const filteredTeams = computed(() => {
             </template>
         </Column>
         <template #empty>
-          <div class="p-4 text-center text-light-gray">{{ t('noTeamsFound') }}</div>
+          <div class="p-4 text-center text-content-muted">{{ t('noTeamsFound') }}</div>
         </template>
       </DataTable>
     </DashboardCard>

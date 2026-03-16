@@ -43,7 +43,7 @@ defineProps<{
         </div>
       </div>
     </div>
-    <div class="mt-auto py-6 border-t border-auxiliar-gray">
+    <div class="mt-auto py-6 border-t">
       <div v-if="!isCollapsed" class="mb-4">
         <div class="h-[12px] bg-auxiliar-gray rounded-full animate-pulse"></div>
       </div>

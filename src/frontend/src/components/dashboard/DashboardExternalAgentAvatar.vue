@@ -10,7 +10,7 @@ const { externalAgent } = defineProps<{
 </script>
 
 <template>
-  <Avatar :class="`${bordered ? 'border-1 border-auxiliar-gray !bg-pale' : externalAgent.icon ? '!bg-transparent' : '!bg-pale'}`" shape="circle" :size="size">
+  <Avatar :class="`'bg-surface' ${bordered ? 'border-1' : ''}`" shape="circle" :size="size">
     <template #icon>
       <img v-if="!externalAgent.icon" :src="externalAgentIcon" class="p-1" />
       <img v-else :src="`data:image/png;base64,${externalAgent.icon}`" />

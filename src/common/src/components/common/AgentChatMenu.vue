@@ -38,20 +38,20 @@ defineExpose({
 <template>
   <div v-click-outside="closeMenu">
     <div v-if="shouldShowInSidebar"
-         class="transition-opacity border-l-[1px] border-auxiliar-gray"
+         class="transition-opacity border-l-[1px]"
          :class="[
            !isCollapsed ? 'mx-2' : '',
            isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
          ]"
          @click.stop.prevent="toggle">
-      <IconDots :class="['text-light-gray', !isCollapsed ? 'ml-3' : '']" />
+      <IconDots :class="['text-content-muted', !isCollapsed ? 'ml-3' : '']" />
     </div>
     <SimpleButton v-else
-                  class="rounded-xl"
+                  :class="`rounded-xl ${!active ? 'dark:bg-content-muted' : ''}`"
                   variant="muted"
                   size="small"
                   @click.stop.prevent="toggle">
-      <IconDots stroke-width="2" :class="!active ? 'text-light-gray' : 'text-abstracta'" />
+      <IconDots stroke-width="2" :class="!active ? 'text-content-muted dark:text-gray-800' : 'text-abstracta'" />
     </SimpleButton>
 
     <Menu

@@ -5,7 +5,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-    <div class="flex gap-2 items-center p-3 py-1 hover:bg-pale/50 rounded-lg cursor-pointer min-h-[48px]"
+    <div class="flex gap-2 items-center p-3 py-1 hover:bg-surface-muted/50 rounded-lg cursor-pointer min-h-[48px]"
         @click="emit('click', $event)">
         <slot name="start"></slot>
         <div class="flex-grow truncate">

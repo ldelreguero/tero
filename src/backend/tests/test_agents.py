@@ -137,7 +137,7 @@ async def test_create_agent(agents: List[AgentListItem], users: dict[int, UserLi
 
 @freeze_time(CURRENT_TIME)
 async def test_update_agent(client: AsyncClient, users: List[UserListItem], teams: List[Team]):
-    update = AgentUpdate(name="Updated Agent", description="Updated description", model_id="gpt-4o", icon_bg_color="FFFFFF", icon=TEST_ICON,
+    update = AgentUpdate(name="Updated Agent", description="Updated description", model_id="gpt-4o", icon=TEST_ICON,
                 temperature=LlmTemperature.PRECISE, reasoning_effort=ReasoningEffort.MEDIUM, team_id=GLOBAL_TEAM_ID, system_prompt="Updated prompt")
     resp = await _update_agent(AGENT_ID, update, client)
     resp.raise_for_status()
@@ -146,7 +146,7 @@ async def test_update_agent(client: AsyncClient, users: List[UserListItem], team
         resp,
         PublicAgent(id=AGENT_ID, name=update.name, description=update.description, last_update=CURRENT_TIME, team=teams[0], user_id=USER_ID,
               model_id=cast(str, update.model_id), system_prompt=cast(str, update.system_prompt), temperature=cast(LlmTemperature, update.temperature), 
-              reasoning_effort=cast(ReasoningEffort, update.reasoning_effort), icon_bg_color=update.icon_bg_color, icon=update.icon, can_edit=True, user=users[0]))
+              reasoning_effort=cast(ReasoningEffort, update.reasoning_effort), icon=update.icon, can_edit=True, user=users[0]))
 
 
 async def _update_agent(agent_id: int, update: AgentUpdate, client: AsyncClient) -> Response:
@@ -428,7 +428,6 @@ async def test_clone_agent(users: dict[int, UserListItem], last_agent_id: int,cl
         id=last_agent_id + 1,
         name="Agent 2 (copy)",
         description="This is the second agent",
-        icon_bg_color=None,
         last_update=CURRENT_TIME,
         team=None,
         icon=None,
@@ -472,4 +471,4 @@ async def _find_agent_prompts(agent_id: int, client: AsyncClient) -> Response:
 async def test_find_default_agent(client: AsyncClient, teams: List[Team]):
     resp = await client.get(AGENTS_PATH + "/default")
     assert_response(resp, PublicAgent(id=6, name="GPT-5 Nano", description="This is the default agent", last_update=PAST_TIME, team=teams[0], user_id=None,
-              model_id="gpt-5-nano", system_prompt="You are a helpful AI agent.", temperature=LlmTemperature.NEUTRAL, reasoning_effort=ReasoningEffort.LOW, icon_bg_color=None, icon=None, can_edit=True, user=None))
+              model_id="gpt-5-nano", system_prompt="You are a helpful AI agent.", temperature=LlmTemperature.NEUTRAL, reasoning_effort=ReasoningEffort.LOW, icon=None, can_edit=True, user=None))

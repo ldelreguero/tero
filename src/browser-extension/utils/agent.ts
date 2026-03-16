@@ -1,7 +1,7 @@
 import { browser, Browser } from 'wxt/browser';
 import { AuthService } from "./auth"
 import type { AuthConfig } from "./auth"
-import { fetchJson, fetchStreamJson, ServerSentEvent } from "./http"
+import { fetchJson, fetchStreamJson, fetchResponse, streamFromResponse, ServerSentEvent } from "./http"
 import { AgentFlow } from "./flow"
 import { addAgent, findAgentById, ExistingAgentError } from "./agent-repository"
 import { AgentPrompt } from "../../common/src/utils/domain"
@@ -59,10 +59,10 @@ export abstract class Agent {
   }
 
   protected async postJson(url: string, body: any, authService?: AuthService): Promise<any> {
-    return await fetchJson(url, await Agent.buildHttpRequest("POST", body, authService));
+    return await fetchJson(url, await Agent.buildHttpRequest("POST", body, authService, browser.identity?.getRedirectURL()));
   }
 
-  public static async buildHttpRequest(method: string, body?: any, authService?: AuthService): Promise<RequestInit> {
+  public static async buildHttpRequest(method: string, body?: any, authService?: AuthService, redirectUri?: string): Promise<RequestInit> {
     const headers = {} as any;
     if (body && !(body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
@@ -70,6 +70,9 @@ export abstract class Agent {
     if (authService) {
       const user = await authService.getUser();
       headers["Authorization"] = "Bearer " + user!.access_token;
+    }
+    if (redirectUri) {
+      headers["X-Redirect-Uri"] = redirectUri;
     }
     const requestInit: RequestInit = {
       method: method,
@@ -351,18 +354,15 @@ export class TeroAgent extends Agent {
       formData.append("parentMessageId", parentMessageId.toString());
     }
     
-    const stream = await handleOAuthRequestsIn(
+    yield* await handleOAuthRequestsIn(
       async () => {
-        const s = fetchStreamJson(url, await Agent.buildHttpRequest("POST", formData, authService));
-        const iterator = s[Symbol.asyncIterator]();
-        await iterator.next();
-        return s;
+        const response = await fetchResponse(url, await Agent.buildHttpRequest("POST", formData, authService));
+        const stream = await streamFromResponse(response, url);
+        return await this.processStreamResponse(stream);
       },
       this,
       authService
     );
-    
-    yield* this.processStreamResponse(stream);
   }
 
   protected sessionUrl(sessionId: any): string {

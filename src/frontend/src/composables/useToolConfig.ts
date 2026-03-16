@@ -3,7 +3,7 @@ import mcpIcon from '@/assets/images/mcp-icon.svg'
 import jiraIcon from '@/assets/images/jira-icon.svg'
 import { h, type SVGAttributes } from 'vue'
 
-const iconFromImage = (imageSrc: string, toolIcon: string): Icon => {
+const iconFromImage = (imageSrc: string): Icon => {
   return (props: SVGAttributes) => {
     const { class: className, ...restProps } = (props ?? {}) as SVGAttributes & { class?: unknown }
 
@@ -11,7 +11,6 @@ const iconFromImage = (imageSrc: string, toolIcon: string): Icon => {
       src: imageSrc,
       width: 20,
       height: 20,
-      'data-tool-icon': toolIcon,
       class: ['tool-menu-icon', className],
       ...restProps
     })
@@ -21,8 +20,8 @@ const iconFromImage = (imageSrc: string, toolIcon: string): Icon => {
 export function useToolConfig() {
   const menuIcons: Record<string, Icon> = {
     docs: IconBrain,
-    'mcp-*': iconFromImage(mcpIcon, 'mcp'),
-    "jira": iconFromImage(jiraIcon, 'jira'),
+    'mcp-*': iconFromImage(mcpIcon),
+    "jira": iconFromImage(jiraIcon),
     browser: IconDeviceDesktopBolt,
     web: IconWorldWww
   }

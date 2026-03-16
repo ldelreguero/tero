@@ -9,7 +9,7 @@ const { variant = 'default', size = 'default', type = 'button', shape = 'pill', 
 }>()
 
 const basePrimaryClasses = 'border-none flex items-center justify-center !ng-offset-0 active:!ring-0 gap-1' + (disabled ? '' : ' hover:!border-none focus:!ring-0 focus:!outline-none focus:!shadow-none');
-const defaultStyles = basePrimaryClasses + ' bg-surface text-dark-gray !outline-1 !outline-auxiliar-gray shadow-light !ring-1 focus:!ring-1 !ring-auxiliar-gray' + (disabled ? '' : ' hover:bg-abstracta hover:text-white');
+const defaultStyles = basePrimaryClasses + ' bg-surface text-content !outline-1 !outline-auxiliar-gray shadow-light !ring-1 focus:!ring-1 !ring-auxiliar-gray dark:bg-surface-muted' + (disabled ? '' : ' hover:bg-abstracta hover:text-white');
 </script>
 
 <template>
@@ -20,11 +20,11 @@ const defaultStyles = basePrimaryClasses + ' bg-surface text-dark-gray !outline-
     :class="{
       [defaultStyles]: variant === 'default',
       [basePrimaryClasses + ' bg-abstracta text-white' + (disabled ? '' : ' hover:brightness-130')]: variant === 'primary',
-      ['bg-pale text-light-gray' + (disabled ? '' : ' hover:contrast-95')]: variant === 'secondary',
+      ['bg-surface-muted text-content-muted dark:text-content' + (disabled ? '' : ' hover:contrast-95')]: variant === 'secondary',
       ['bg-error-alt text-white' + (disabled ? '' : ' hover:brightness-105')]: variant === 'error',
       [basePrimaryClasses + ' bg-surface']: variant === 'light',
-      [basePrimaryClasses + ' bg-pale']: variant === 'muted',
-      ['!bg-pale !text-light-gray' + (disabled ? '' : ' hover:contrast-90')]: disabled,
+      [basePrimaryClasses + ' bg-surface-muted']: variant === 'muted',
+      ['!bg-surface-muted !text-content-muted' + (disabled ? '' : ' hover:contrast-90')]: disabled,
       'p-2': size === 'default',
       'p-1': size === 'small',
       'w-full p-2': size === 'large',

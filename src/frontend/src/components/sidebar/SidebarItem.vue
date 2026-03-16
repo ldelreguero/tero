@@ -11,7 +11,7 @@ defineProps<{
 </script>
 
 <template>
-    <div class="flex items-center hover:bg-pale rounded-md cursor-pointer group px-2 py-1 w-full overflow-hidden"
+    <div class="flex items-center hover:bg-surface-muted rounded-md cursor-pointer group px-2 py-1 w-full overflow-hidden"
          :class="[variant === 'primary' ? 'hover:!bg-abstracta hover:!text-white' : '', $attrs.class]"
          @click="emit('click')">
         <div class="flex-1" ref="itemContent">

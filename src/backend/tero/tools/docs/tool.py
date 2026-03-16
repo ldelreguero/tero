@@ -32,6 +32,7 @@ from ...agents.domain import AgentToolConfig
 from ...ai_models import ai_factory
 from ...ai_models.domain import LlmModel
 from ...ai_models.repos import AiModelRepository
+from ...ai_models.vllm_provider import HuggingFaceTokenizerEncoding
 from ...core.assets import solve_asset_path
 from ...core.env import env
 from ...files.domain import File, FileProcessor
@@ -45,6 +46,7 @@ from ...users.domain import User
 from ..core import AgentToolWithFiles, load_schema
 from .domain import DocToolFile, DocToolConfig
 from .repos import DocToolFileRepository, DocToolConfigRepository
+
 
 
 logger = logging.getLogger(__name__)
@@ -106,9 +108,7 @@ class DocsTool(AgentToolWithFiles):
             self._embedding_usage = Usage(user_id=self.user_id, agent_id=self.agent.id, model_id=env.embedding_model, type=UsageType.EMBEDDING_TOKENS)
         return self._embedding_usage
 
-    async def _setup_tool(
-        self, prev_config: Optional[AgentToolConfig]
-    ) -> Optional[dict]:
+    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]):
         await self._build_record_manager().acreate_schema()
 
     def _build_record_manager(self) -> SQLRecordManager:
@@ -190,17 +190,29 @@ class DocsTool(AgentToolWithFiles):
     async def _generate_file_description(self, file: File, model: LlmModel, message_usage: MessageUsage) -> str:
         async with aiofiles.open(solve_asset_path('file-description-prompt.md', __file__)) as f:
             system_prompt = await f.read()
-        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
-            model_name=model.id,
-            chunk_size=env.docs_tool_description_chunk_size,
-            chunk_overlap=env.docs_tool_description_chunk_overlap,
-        )
+        text_splitter = self._create_text_splitter(model.id)
         chunks = text_splitter.split_text(cast(str, file.processed_content))
         ret = "none"
         for chunk in chunks:
             prompt = system_prompt + f"Previous Description: {ret}\n\n" + f"## File contents\n\n{chunk}"
             ret = await self._generate_description(prompt, 200, model, message_usage)
         return ret
+
+    @staticmethod
+    def _create_text_splitter(model_id: str) -> CharacterTextSplitter:
+        hf_tokenizer = HuggingFaceTokenizerEncoding.from_pretrained(model_id)
+        if hf_tokenizer:
+            return CharacterTextSplitter(
+                chunk_size=env.docs_tool_description_chunk_size,
+                chunk_overlap=env.docs_tool_description_chunk_overlap,
+                length_function=lambda text: len(hf_tokenizer.encode(text)),
+            )
+        
+        return CharacterTextSplitter.from_tiktoken_encoder(
+            model_name=model_id,
+            chunk_size=env.docs_tool_description_chunk_size,
+            chunk_overlap=env.docs_tool_description_chunk_overlap,
+        )
 
     @staticmethod
     async def _generate_description(prompt: str, max_length: int, model: LlmModel, message_usage: MessageUsage) -> str:

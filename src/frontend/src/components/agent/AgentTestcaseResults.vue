@@ -48,7 +48,7 @@ const handleStopSuiteRun = async () => {
                     v-html="t('running')"></span>
                 <span v-else
                     v-html="t('runResultTitle', { date: testExecutionStore.selectedSuiteRun?.executedAt ? moment(testExecutionStore.selectedSuiteRun?.executedAt).format('D MMM YYYY HH:mm') : '' })"></span>
-                <AgentTestcaseRunStatus class="bg-pale rounded-xl px-2 py-1"
+                <AgentTestcaseRunStatus class="bg-surface-muted rounded-xl px-2 py-1"
                     :passed="countResultWithStatus(TestCaseResultStatus.SUCCESS)"
                     :failed="countResultWithStatus(TestCaseResultStatus.FAILURE)"
                     :error="countResultWithStatus(TestCaseResultStatus.ERROR)"
@@ -75,7 +75,7 @@ const handleStopSuiteRun = async () => {
         </div>
         <div class="flex flex-col gap-2 min-h-0 overflow-y-auto">
             <div v-for="result in testExecutionStore.testCaseResults" :key="result.testCaseId">
-                <div class="border-1 border-auxiliar-gray rounded-xl px-3 py-2 cursor-pointer shadow-xs group h-[50px]"
+                <div class="border-1 rounded-xl px-3 py-2 cursor-pointer shadow-xs group h-[50px]"
                     @click="handleResultClick(result)"
                     :class="{ '!border-abstracta': testExecutionStore.selectedResult?.testCaseId === result.testCaseId }">
                     <div class="flex items-center justify-between h-full">

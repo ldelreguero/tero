@@ -59,7 +59,7 @@ const adjustMessagesScroll = async () => {
     </template>
     <template v-slot:content>
       <div class="h-full flex flex-col">
-        <div class="flex flex-row border-b border-auxiliar-gray pb-2 mb-2 items-center">
+        <div class="flex flex-row border-b pb-2 mb-2 items-center">
           <div class="flex flex-row gap-2">
             <img :src="agent.logo" class="w-6 h-6" />
             <span class="text-base">{{ agent.manifest.name! }}</span>

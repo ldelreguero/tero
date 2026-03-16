@@ -10,7 +10,6 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import aiofiles
 from fastapi.background import BackgroundTasks
 from jinja2 import Environment, FileSystemLoader
-from PIL import Image
 from pydantic import BaseModel
 from slugify import slugify
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -22,7 +21,7 @@ from ..files.domain import File, FileStatus
 from ..threads.domain import Thread, ThreadMessage, ThreadMessageOrigin
 from ..threads.repos import ThreadRepository, ThreadMessageRepository
 from ..tools.core import AgentTool
-from ..tools.oauth import ToolOAuthRequest
+from ..tools.auth import ToolAuthRequestException
 from ..tools.repos import ToolRepository
 from ..users.domain import User
 from .domain import Agent, AgentUpdate, AgentToolConfig, LlmTemperature, ReasoningEffort
@@ -54,8 +53,7 @@ async def generate_agent_zip(agent: Agent, user_id: int, db: AsyncSession) -> Fi
         tools = await _find_agent_tools(agent, db)
         zip_file.writestr(f"{agent_name}/agent.md", await _generate_agent_markdown(agent, tools, user_id, db))
         if agent.icon:
-            icon_data = _create_icon_with_background(agent.icon, agent.icon_bg_color) if agent.icon_bg_color else agent.icon
-            zip_file.writestr(f"{agent_name}/icon.png", icon_data)
+            zip_file.writestr(f"{agent_name}/icon.png", agent.icon)
         tool_file_repo = AgentToolConfigFileRepository(db)
         for tool in tools:
             for file in tool.files:
@@ -154,25 +152,6 @@ async def _format_evaluator(evaluator: Optional[Evaluator], db: AsyncSession) ->
         "model_config": _format_model_config(evaluator.temperature, evaluator.reasoning_effort, evaluator_model.model_type),
         "prompt": evaluator.prompt
     }
-
-
-def _create_icon_with_background(icon_bytes: bytes, bg_color: str) -> bytes:
-    try:
-        icon_img = Image.open(BytesIO(icon_bytes))
-        if icon_img.mode != 'RGBA':
-            icon_img = icon_img.convert('RGBA')
-        try:
-            bg_rgb = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
-            bg_image = Image.new('RGBA', icon_img.size, bg_rgb + (255,))
-            result_img = Image.alpha_composite(bg_image, icon_img)
-        except (ValueError, TypeError):
-            result_img = icon_img
-        output = BytesIO()
-        result_img.save(output, format='PNG')
-        return output.getvalue()
-    except Exception as e:
-        logger.warning(f"Error creating icon with background, using icon as is.", exc_info=True)
-        return icon_bytes
 
 
 async def update_agent_from_zip(agent: Agent, zip_content: bytes, user: User, db: AsyncSession, background_tasks: BackgroundTasks) -> Agent:
@@ -332,7 +311,7 @@ async def _configure_parsed_tool(tool_id: str, new_config: Dict[str, Any], agent
     tool.configure(agent, user.id, config, db)
     try:
         await tool.setup(prev_config=tc)
-    except ToolOAuthRequest as e:
+    except ToolAuthRequestException as e:
         logger.error(f"Tool OAuth required by tool {tool_id} imported by user {user.id} but still not supported in imports", exc_info=True)
     await AgentToolConfigRepository(db).add(AgentToolConfig(
             agent_id=agent.id,

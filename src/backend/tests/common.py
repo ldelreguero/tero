@@ -21,6 +21,7 @@ from tero.core.assets import solve_asset_path
 from tero.core.env import env # noqa: F401  # used by test files importing common
 from tero.files.domain import FileStatus
 from tero.threads.api import THREAD_MESSAGES_PATH, THREADS_PATH, ThreadCreateApi
+from tero.threads.domain import ThreadMessage
 
 
 def parse_date(value: str) -> datetime:
@@ -124,4 +125,16 @@ async def find_asset_bytes(filename: str) -> bytes:
 
 async def find_last_id(column: Mapped[int], db: AsyncSession) -> int:
     result = await db.exec(select(func.max(column)))
+    return result.one()
+
+
+async def find_last_message_id_for_thread(thread_id: int, db: AsyncSession) -> int:
+    """
+    Find the last message id in a thread, assuming it has only one branch.
+    This is useful for tests that need to add messages to a thread.
+    """
+    result = await db.exec(
+        select(func.max(ThreadMessage.id))
+        .where(ThreadMessage.thread_id == thread_id)
+    )
     return result.one()

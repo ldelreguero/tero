@@ -64,17 +64,17 @@ const onRemoveOption = (val: string) => {
     </SimpleButton>
   </div>
   <div class="flex flex-col gap-2">
-    <div v-if="safeModelValue.length === 0" class="text-sm text-light-gray">
+    <div v-if="safeModelValue.length === 0" class="text-sm text-content-muted">
       <div>{{ t('noOptions') }}</div>
     </div>
     <div v-else class="flex flex-row flex-wrap gap-2 w-0 min-w-full">
-      <div v-for="option in safeModelValue" :key="option" class="relative rounded-xl border-1 border-auxiliar-gray">
+      <div v-for="option in safeModelValue" :key="option" class="relative rounded-xl border-1">
         <div class="flex justify-between items-center p-2 gap-2">
           <div class="flex flex-row items-center gap-2">
             <span>{{ optionLabels(id, option) }}</span>
           </div>
-          <div v-if="!viewMode" class="flex flex-row justify-center items-center border-l border-auxiliar-gray pl-2 gap-2">
-            <InteractiveIcon @click="onRemoveOption(option)" :icon="IconX" class="hover:text-error-alt"/>
+          <div v-if="!viewMode" class="flex flex-row justify-center items-center border-l pl-2 gap-2">
+            <SimpleIcon interactive @click="onRemoveOption(option)" :icon="IconX" class="hover:text-error-alt"/>
           </div>
         </div>
       </div>

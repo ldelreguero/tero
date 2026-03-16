@@ -14,11 +14,7 @@ from langchain_core.messages import (
     ToolMessage,
     BaseMessage,
 )
-from langchain_core.messages.utils import (
-    _default_text_splitter,
-    _is_message_type,
-    _first_max_tokens,
-)
+from langchain_core.messages.utils import _is_message_type
 from langchain_core.tools import tool, BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langgraph.prebuilt import create_react_agent
@@ -30,6 +26,7 @@ from ..agents.repos import AgentToolConfigRepository
 from ..ai_models import ai_factory
 from ..ai_models.repos import AiModelRepository
 from ..core.env import env
+from ..threads.core import trim_messages_to_fit_model
 from ..tools.core import AgentTool, AgentToolMetadata
 from ..tools.repos import ToolRepository
 from ..usage.domain import MessageUsage
@@ -191,25 +188,15 @@ class AgentEngine:
             )
             messages = messages[end_index:]
 
-            model_token_limit = self._agent.model.token_limit
             tools_tokens = self._count_tools_tokens(tools, llm)
             system_message_tokens = token_counter([system_message])
-            output_token_limit = (
-                self._agent.model.output_token_limit
-            )  # needed to reserve space for larger responses
+            reserved_tokens = tools_tokens + system_message_tokens
 
-            result = _first_max_tokens(
+            result = trim_messages_to_fit_model(
                 messages,
-                max_tokens=max(
-                    0,
-                    model_token_limit
-                    - tools_tokens
-                    - system_message_tokens
-                    - output_token_limit,
-                ),
                 token_counter=token_counter,
-                text_splitter=_default_text_splitter,
-                partial_strategy="first",
+                model=self._agent.model,
+                reserved_tokens=reserved_tokens,
                 end_on=HumanMessage,
             )
             # Re-reverse the messages and add back the system message

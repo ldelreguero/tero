@@ -48,5 +48,5 @@ defineExpose({
 </script>
 
 <template>
-    <Select v-model="model" :options="options" option-label="name" option-value="id" :disabled="props.disabled" :class="{ '!bg-pale !cursor-not-allowed !opacity-60': props.disabled }" />
+    <Select v-model="model" :options="options" option-label="name" option-value="id" :disabled="props.disabled" :class="{ '!bg-surface-muted !cursor-not-allowed !opacity-60': props.disabled }" />
 </template>

@@ -27,7 +27,7 @@ const emit = defineEmits<{
             <slot name="avatar" />
             <div class="flex flex-col min-w-0 gap-1">
               <span class="font-semibold text-2xl truncate min-w-0 max-w-full block">{{ props.title }}</span>
-              <div class="flex gap-1 text-light-gray text-xs w-fit">
+              <div class="flex gap-1 text-content-muted text-xs w-fit">
                 <slot name="subtitle" />
               </div>
             </div>
@@ -38,7 +38,7 @@ const emit = defineEmits<{
             </SimpleButton>
           </div>
         </div>
-        <div class="flex gap-4 px-5 py-4 border-b border-t border-auxiliar-gray">
+        <div class="flex gap-4 px-5 py-4 border-b border-t">
           <slot name="summary" />
         </div>
         <div class="flex flex-col gap-2 px-5 py-4 min-h-[256px]">

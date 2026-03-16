@@ -119,21 +119,20 @@ const inputIsAIGenerating = computed(() => {
 });
 
 const commonInputClasses = computed(() => [
-  'w-full py-2 my-1 rounded-xl bg-transparent placeholder:text-light-gray',
+  'w-full py-2 my-1 rounded-xl bg-surface placeholder:text-content-muted',
   'outline-1 outline-auxiliar-gray focus:outline-abstracta focus:ring-1 focus:ring-abstracta focus:border-abstracta',
   props.startIcon ? 'px-11' : 'px-2',
   props.endIcon ? 'pr-11' : 'pr-2',
   inputIsAIGenerating.value && 'animate-glowing',
   isOverMaxLength.value && 'pr-10',
   hasError() && 'outline-error-alt focus:outline-error-alt ring-1 ring-error-alt',
-  props.variant === 'light' && 'bg-surface outline-pale focus:outline-none focus:ring-0 focus:border-none',
   isNumber() && '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
-  props.disabled && '!bg-pale !text-light-gray opacity-60'
+  props.disabled && '!bg-surface-muted !text-content-muted opacity-60'
 ].filter(Boolean));
 
 const commonIconClasses = computed(() => [
-  'text-light-gray hover:text-dark-gray cursor-pointer absolute',
-  props.disabled && '!text-light-gray opacity-60'
+  'text-content-muted hover:text-content cursor-pointer absolute',
+  props.disabled && '!text-content-muted opacity-60'
 ].filter(Boolean));
 
 const translateClasses = computed(() => [

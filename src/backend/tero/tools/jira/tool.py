@@ -1,23 +1,18 @@
-import aiofiles
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-import json
 from http import HTTPMethod
 import logging
 from typing import Any, Optional, cast
-from urllib.parse import quote
 
-import httpx
-from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import AnyHttpUrl
 from sqlmodel import Field, SQLModel, and_, select, delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ...agents.domain import AgentToolConfig
-from ...core.assets import solve_asset_path
+from ...agents.domain import Agent, AgentToolConfig
 from ...core.repos import scalar
-from ..core import AgentTool, StatusUpdateCallbackHandler, load_schema
-from ..oauth import AgentToolOauth, ToolAuthCallback, ToolOAuthClientInfo, ToolOAuthClientInfoRepository, ToolOAuthState, ToolOAuthRepository, OAuthMetadata
+from ..core import load_schema
+from ..openapi_tool import OpenApiTool
+from ..auth import AgentToolOauth, ToolAuthCallback, ToolOAuthCallback, ToolOAuthClientInfo, ToolOAuthClientInfoRepository, ToolAuthRepository, OAuthMetadata, ToolAuthCallbackError
 
 
 logger = logging.getLogger(__name__)
@@ -51,42 +46,32 @@ class JiraToolConfigRepository:
         await self._db.commit()
 
 
-class JiraTool(AgentTool):
+class JiraTool(OpenApiTool):
     id: str = JIRA_TOOL_ID
     name: str = "Jira"
     description: str = "Allows to use interact with Jira"
     config_schema: dict = load_schema(__file__)
-    _BODY_LOCATION = "body"
-    _CLIENT_SECRET_MASK = "********"
-    
-    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]) -> Optional[dict]:
-        await self._save_client_info(self.config)
-        if prev_config and self.config != prev_config.config:
-            await ToolOAuthRepository(self.db).delete_token(self.user_id, self.agent.id, self.id)
-            await JiraToolConfigRepository(self.db).delete(self.agent.id)
-        async with self.load():
-            pass
-        # masking clientSecret to avoid storing it in plain text in tool configuration table. It is already store encrypted in client info table.
-        return {prop: val if prop != "clientSecret" else self._CLIENT_SECRET_MASK for prop, val in self.config.items()}
-    
-    async def _save_client_info(self, config: dict):
-        repo = ToolOAuthClientInfoRepository(self.db)
-        client_info = await repo.find_by_ids(self.agent.id, self.id)
-        client_id = config["clientId"]
-        client_secret = config["clientSecret"]
-        scope = " ".join(config["scope"])
-        if not client_info:
-            client_info = ToolOAuthClientInfo(
+    _client_secret: Optional[str] = None
+
+    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]):
+        client_info_repo = ToolOAuthClientInfoRepository(self.db)
+        prev_client_info = await client_info_repo.find_by_ids(self.agent.id, self.id)
+        client_secret = self._get_secret("clientSecret")
+        client_id = self.config["clientId"]
+        if prev_config and prev_config.config != self.config or prev_client_info and client_secret and prev_client_info.client_secret != client_secret:
+            if not client_secret and prev_client_info and prev_client_info.client_id == client_id:
+                client_secret = prev_client_info.client_secret
+            await self.teardown()
+        if client_secret:
+            await client_info_repo.save(ToolOAuthClientInfo(
                 agent_id=self.agent.id,
                 tool_id=self.id,
                 client_id=client_id,
                 client_secret=client_secret,
-                scope=scope)
-        else:
-            client_info.client_id = client_id
-            client_info.client_secret = client_secret if client_secret != self._CLIENT_SECRET_MASK else client_info.client_secret
-            client_info.scope = scope
-        await repo.save(client_info)
+                token_endpoint_auth_method="client_secret_post",
+                scope=" ".join(self.config["scope"])))
+        async with self.load():
+            pass
         
     @asynccontextmanager
     async def load(self) -> AsyncIterator['JiraTool']:
@@ -116,47 +101,37 @@ class JiraTool(AgentTool):
         ret = next(resource["id"] for resource in resp)
         await repo.save(JiraToolConfig(agent_id=self.agent.id, cloud_id=ret))
         return ret
-
-    async def _invoke_rest_api(self, method: str, url: str, params: Optional[dict] = None, headers: Optional[dict] = None, body: Optional[dict] = None) -> Any:
-        headers = headers or {}
+    
+    async def _add_auth_headers(self, headers: dict) -> dict:
         tokens = await cast(AgentToolOauth, self._oauth).solve_tokens()
         if tokens:
             headers["Authorization"] = f"Bearer {tokens.access_token}"
-        async with httpx.AsyncClient() as client:
-            response = await client.request(method, url, params=params, headers=headers, json=body)
-            response.raise_for_status()
-            if response.status_code == 204:
-                return None
-            return response.json()
+        return headers
 
-    async def auth(self, auth_callback: ToolAuthCallback, state: ToolOAuthState):
+    async def auth(self, auth_callback: ToolAuthCallback):
+        state = await ToolAuthRepository(self.db).find_state(self.user_id, self.id, cast(ToolOAuthCallback, auth_callback).state)
+        if not state:
+            raise ToolAuthCallbackError("OAuth state not found")
         oauth = await self._load_oauth()
-        await oauth.callback(auth_callback, state)
+        await oauth.callback(cast(ToolOAuthCallback, auth_callback), state)
 
     async def teardown(self):
-        await ToolOAuthRepository(self.db).delete_token(self.user_id, self.agent.id, self.id)
+        await ToolAuthRepository(self.db).delete_token(self.user_id, self.agent.id, self.id)
         await ToolOAuthClientInfoRepository(self.db).delete(self.agent.id, self.id)
         await JiraToolConfigRepository(self.db).delete(self.agent.id)
 
-    async def build_langchain_tools(self) -> list[BaseTool]:
-        api_spec = await self._load_json("jira-api-spec.json")
-        schemas = api_spec["components"]["schemas"]
-        doc_node_schema = await self._load_json("simplified-doc-node-schema.json")
+    async def _load_api_spec(self) -> dict:
+        ret = await super()._load_api_spec()
+        schemas = ret["components"]["schemas"]
         # using simplified schema instead of the original one from https://unpkg.com/@atlaskit/adf-schema@49.0.1/dist/json-schema/v1/full.json 
         # since original schema is huge, consuming time, tokens and making llm confused with so much information
         # additionally, just having version after content in doc_node makes the llm to generate a call without the version attribute, which makes the request to fail
+        doc_node_schema = await self._load_json("simplified-doc-node-schema.json")
         schemas.update(doc_node_schema["definitions"])
-        return [self._build_langchain_tool(path, method, method_spec, schemas) 
-                for path, path_spec in api_spec["paths"].items() if self._is_filtered_path(path)
-                for method, method_spec in path_spec.items()]
-
-    async def _load_json(self, filename: str) -> dict:
-        # we use a local file to avoid the need to request the api spec from the server every time the tool is used (improve performance, avoid connectivity issues, avoid potential unsupported changes in file content)
-        async with aiofiles.open(solve_asset_path(filename, __file__)) as file:
-            return json.loads(await file.read())
+        return ret
 
     # there is a limitation of up to 128 functions that can be passed to OpenAI, and JIRA API has more than 590 methods. This method filters the most common and used ones.
-    def _is_filtered_path(self, path: str) -> bool:
+    def _should_include_operation(self, path: str, method: str) -> bool:
         base_path = "/rest/api/3"
         issues_path = f"{base_path}/issue"
         issue_path = f"{issues_path}/{{issueIdOrKey}}"
@@ -168,113 +143,14 @@ class JiraTool(AgentTool):
         return path in [
             issues_path, issue_path, f"{issue_path}/assignee", f"{issue_path}/attachments", f"{issue_path}/changelog", 
             comments_path, f"{comments_path}/{{id}}", properties_path, f"{properties_path}/{{propertyKey}}", f"{issue_path}/transitions", 
-            f"{search_path}/approximate-count", f"{search_path}/jql", f"{projects_path}/search", f"{project_path}", f"{project_path}/statuses", 
-            f"{base_path}/myself", f"{base_path}/users/search"]
+            f"{search_path}/approximate-count", f"{search_path}/jql", f"{projects_path}/search",
+            f"{base_path}/myself", f"{base_path}/users/search"] \
+                or (method == "get" and path in [f"{project_path}", f"{project_path}/statuses"])
     
-    def _build_langchain_tool(self, path: str, method: str, method_spec: dict, schemas: dict) -> BaseTool:
-        async def call_tool(**arguments: dict[str, Any]) -> str:
-            param_type = self._find_unique_parameter_type(method_spec)
-            params = {param_type: arguments} if param_type else arguments
-            path_params = {key: quote(str(value)) for key, value in params.get("path", {}).items()}
-            final_path = path.format(**path_params) if path_params else path
-            return await self._invoke_rest_api(method, f"{self._api_url}{final_path}", params.get("query"), params.get("header"), params.get("body"))
-        
-        name = "Jira-" + method_spec["operationId"]
-        description = "Jira tool that " + method_spec["description"]
-        return StructuredTool(
-            name=name,
-            description=description,
-            args_schema=self._build_args_schema(method_spec, schemas),
-            coroutine=call_tool,
-            callbacks=[StatusUpdateCallbackHandler(name, description=description)]
-        )
-    
-    def _find_unique_parameter_type(self, method_spec: dict) -> Optional[str]:
-        ret = None
-        for param in method_spec.get("parameters", []):
-            location = param["in"]
-            if ret and ret != location:
-                return None
-            ret = location
-        body_schema = self._find_body_schema(method_spec)
-        if ret and body_schema:
-            return None
-        return ret if not body_schema else self._BODY_LOCATION
-
-    def _find_body_schema(self, method_spec: dict) -> Optional[dict]:
-        # currently we are only supporting json body requests
-        return method_spec.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {})
-    
-    def _build_args_schema(self, method_spec: dict, schemas: dict) -> dict[str, Any]:
-        ret = self._build_params_schema(method_spec)
-        body_schema = self._find_body_schema(method_spec)
-        props = ret["properties"]
-        if body_schema:
-            props[self._BODY_LOCATION] = body_schema
-        input_schemas = [schema for schema in props.values() if schema]
-        ret = input_schemas[0] if len(input_schemas) == 1 else ret
-        self._refactor_schema_refs(ret, schemas)
-        return ret
-    
-    def _build_params_schema(self, method_spec: dict) -> dict:
-        ret = self._build_empty_schema()
-        props = ret["properties"]
-        for param in method_spec.get("parameters", []):
-            location = param["in"]
-            props[location] = props.get(location, self._build_empty_schema())
-            location_params = props[location]
-            name = param["name"]
-            param_schema = param["schema"]
-            description = param.get("description")
-            if description:
-                param_schema["description"] = description
-            location_params["properties"][name] = param_schema
-            if param.get("required"):
-                location_params["required"].append(name)
-        return ret
-    
-    def _build_empty_schema(self) -> dict:
-        return {"type": "object", "properties": {}, "required": []}
-    
-    def _refactor_schema_refs(self, schema: dict, schemas: dict):
-        refs = set()
-        self._collect_and_refactor_schema_refs(schema, schemas, refs)
-        if refs:
-            schema["$defs"] = {ref: schemas[ref] for ref in refs}
-
-    def _collect_and_refactor_schema_refs(self, schema: dict, schemas: dict, refs: set):
-        ref = schema.get("$ref")
-        if ref:
-            self._refactor_ref(schema, ref.split("/")[-1], schemas, refs)
-        self._refactor_subschemas_refs("allOf", schema, schemas, refs)
-        self._refactor_subschemas_refs("anyOf", schema, schemas, refs)
-        self._refactor_subschemas_refs("oneOf", schema, schemas, refs)
-        schema_type = schema.get("type")
-        if not schema_type:
-            # fixing jira schema which does not properly define the schema for comments
-            if "Atlassian Document Format" in schema.get("description", ""):
-                self._refactor_ref(schema, "doc_node", schemas, refs)
-        elif schema_type == "array":
-            items = schema.get("items")
-            if items:
-                self._collect_and_refactor_schema_refs(items, schemas, refs)
-        elif schema_type == "object":
-            for value in schema.get("properties", {}).values():
-                self._collect_and_refactor_schema_refs(value, schemas, refs)
-            # removing additional properties to simplify schema since so far we haven't identified any use case for them when used by the llm
-            if schema.get("additionalProperties"):
-                del schema["additionalProperties"]
-
-    def _refactor_ref(self, schema: dict, simple_ref: str, schemas: dict, refs: set):
-        schema["$ref"] = f"#/$defs/{simple_ref}"
-        # passing refs as parameter and modify it instead of returning it to be able to make this check to avoid infinite recursion in cyclic references
-        if simple_ref not in refs:
-            refs.add(simple_ref)
-            self._collect_and_refactor_schema_refs(schemas[simple_ref], schemas, refs)
-
-    def _refactor_subschemas_refs(self, subschema_key: str, schema: dict, schemas: dict, refs: set):
-        for subSchema in schema.get(subschema_key, []):
-            self._collect_and_refactor_schema_refs(subSchema, schemas, refs)
+    def _handle_schema_without_type(self, schema: dict, schemas: dict, refs: set) -> None:
+        # Fix Jira schema which does not properly define the schema for comments.
+        if "Atlassian Document Format" in schema.get("description", ""):
+            self._refactor_ref(schema, "doc_node", schemas, refs)
     
     async def clone(self, agent_id: int, cloned_agent_id: int, tool_id: str, user_id: int, db: AsyncSession) -> None:
         pass

@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, delete, and_, col
+from sqlmodel import select, delete, and_, col, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..core.repos import scalar, attr
@@ -27,7 +28,7 @@ class TeamRepository:
         else:
             query = query.join(TeamRole, and_(User.id == TeamRole.user_id)).where(TeamRole.team_id == team_id)
         query = query.where(and_(
-            col(User.deleted_at).is_(None),
+            or_(col(User.deleted_at).is_(None), col(User.deleted_at) > datetime.now(timezone.utc)),
             col(User.name).ilike(f"%{search}%") if search else True
         )).limit(limit).offset(offset).order_by(col(User.name))
 

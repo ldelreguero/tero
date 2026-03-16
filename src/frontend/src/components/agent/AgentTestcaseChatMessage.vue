@@ -44,11 +44,11 @@ export class AgentTestcaseChatUiMessage{
 </script>
 
 <script setup lang="ts">
-import { IconEditCircle } from '@tabler/icons-vue';
+import { IconEditCircle, IconTrash } from '@tabler/icons-vue';
 import { escapeHtml } from 'markdown-it/lib/common/utils'
 import { useI18n } from 'vue-i18n'
 
-defineProps<{
+const props = defineProps<{
     message: AgentTestcaseChatUiMessage
     isSelected?: boolean
     actionsEnabled?: boolean
@@ -57,9 +57,14 @@ defineProps<{
 
 const emit = defineEmits<{
     (e: 'select', message: AgentTestcaseChatUiMessage): void
+    (e: 'delete', message: AgentTestcaseChatUiMessage): void
 }>()
 
 const { t } = useI18n()
+
+const handleDeleteMessage = () => {
+    emit('delete', props.message)
+}
 
 </script>
 
@@ -67,23 +72,25 @@ const { t } = useI18n()
     <div class="p-2 py-3 formatted-text w-full" @click="selectable ? emit('select', message) : null">
         <div class="flex flex-col gap-2" :class="{'items-end justify-end': message.isUser, 'items-start justify-start': !message.isUser}">
             <div class="flex gap-4 rounded-xl border-1 border-transparent" :class="{
-                'justify-self-end overflow-hidden bg-pale max-w-3/4': message.isUser,
+                'justify-self-end overflow-hidden bg-surface-muted  max-w-3/4': message.isUser,
                 'p-4': message.isPlaceholder || message.isUser,
                 'cursor-pointer': selectable,
                 'gap-2 max-w-full': !message.isUser,
                 '!border-primary border-pulse-primary': message.isUser && isSelected,
                 'p-4 !border-info border-pulse-info': !message.isUser && isSelected,
-                '!border-auxiliar-gray': message.isPlaceholder && !message.isUser,
+                '!border-content-muted': message.isPlaceholder && !message.isUser,
                 'border-dashed': message.isPlaceholder
             }">
                 <div class="overflow-x-auto">
-                    <div class="break-words" :class="{'text-dark-gray': !message.isPlaceholder, 'text-light-gray': message.isPlaceholder}"
+                    <div class="break-words" :class="{'text-content': !message.isPlaceholder, 'text-content-muted': message.isPlaceholder}"
                         v-html="message.text ? escapeHtml(message.text).replace(/\n/g, '<br/>') : ''"></div>
                 </div>
             </div>
             <div class="flex gap-2" :class="!actionsEnabled ? 'invisible' : ''">
-                <InteractiveIcon v-tooltip.bottom="t('editMessageButton')" @click="$emit('select', message)"
+                <SimpleIcon interactive v-tooltip.bottom="t('editMessageButton')" @click="$emit('select', message)"
                     :icon="IconEditCircle" />
+                <SimpleIcon interactive v-tooltip.bottom="t('deleteMessageButton')" @click="handleDeleteMessage"
+                    :icon="IconTrash" class="hover:text-error-alt" />
             </div>
         </div>
     </div>
@@ -104,10 +111,12 @@ const { t } = useI18n()
 <i18n lang="json">
 {
     "en": {
-        "editMessageButton": "Edit message"
+        "editMessageButton": "Edit message",
+        "deleteMessageButton": "Delete message"
     },
     "es": {
-        "editMessageButton": "Editar mensaje"
+        "editMessageButton": "Editar mensaje",
+        "deleteMessageButton": "Eliminar mensaje"
     }
 }
 </i18n>

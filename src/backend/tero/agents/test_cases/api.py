@@ -17,12 +17,12 @@ from ...users.domain import User
 from ...threads.domain import Thread, ThreadMessage, ThreadMessageOrigin, ThreadMessagePublic, MAX_THREAD_NAME_LENGTH
 from ...threads.engine import AgentEngine
 from ...threads.repos import ThreadMessageRepository, ThreadRepository
-from ...tools.oauth import ToolOAuthRequest, build_tool_oauth_request_http_exception
+from ...tools.auth import ToolAuthRequestException, build_tool_auth_request_http_exception
 from ..api import AGENT_PATH, find_editable_agent
 from ..domain import Agent, CLONE_SUFFIX
 from ..repos import AgentRepository
 from .clone import clone_test_case
-from .domain import TestCase, PublicTestCase, NewTestCaseMessage, UpdateTestCaseMessage, UpdateTestCase, TestSuiteRun, TestSuiteRunStatus, RunTestSuiteRequest, TestCaseResult, TestSuiteEventType
+from .domain import TestCase, PublicTestCase, NewTestCaseMessage, UpdateTestCaseMessage, UpdateTestCase, TestSuiteRun, TestSuiteRunStatus, RunTestSuiteRequest, TestCaseResult, TestSuiteEventType, CreateTestCase
 from .events import listen_for_suite_run_events, monitor_cancellation
 from .name_generation import generate_test_case_name
 from .repos import TestCaseRepository, TestCaseResultRepository, TestSuiteRunRepository, TestSuiteRunEventRepository
@@ -42,31 +42,79 @@ async def find_test_cases(agent_id: int, user: Annotated[User, Depends(get_curre
     return await TestCaseRepository(db).find_by_agent(agent.id)
 
 
-@router.post(TEST_CASES_PATH, response_model=PublicTestCase)
-async def add_test_case(agent_id: int, user: Annotated[User, Depends(get_current_user)],
-        db: Annotated[AsyncSession, Depends(get_db)]) -> TestCase:
+@router.post(TEST_CASES_PATH, response_model=PublicTestCase, status_code=status.HTTP_201_CREATED)
+async def add_test_case(
+    agent_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    create_test_case_options: Optional[CreateTestCase] = None
+) -> TestCase:
     agent = await find_editable_agent(agent_id, user, db)
     test_cases_repo = TestCaseRepository(db)
+    thread_message_repo = ThreadMessageRepository(db)
 
-    empty_test_case = await test_cases_repo.find_empty_test_case(agent.id)
-    if empty_test_case:
-        return empty_test_case
+    source_chat_messages = None
+    if create_test_case_options and create_test_case_options.from_thread_id is not None:
+        source_thread = await ThreadRepository(db).find_by_id(create_test_case_options.from_thread_id, user.id)
+        if source_thread is None or source_thread.agent_id != agent.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="threadNotFound")
 
-    test_cases = await test_cases_repo.find_by_agent(agent.id)
-    thread = await ThreadRepository(db).add(
+        if create_test_case_options.branch_message_id is not None:
+            leaf_message = await thread_message_repo.find_by_thread_id_and_message_id(
+                create_test_case_options.from_thread_id, create_test_case_options.branch_message_id
+            )
+        else:
+            leaf_message = await thread_message_repo.find_last_by_thread_id(create_test_case_options.from_thread_id)
+
+        if leaf_message is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="noMessageFound")
+        source_chat_messages = await thread_message_repo.find_previous_messages(leaf_message)
+        source_chat_messages.append(leaf_message)
+    else:
+        empty_test_case = await test_cases_repo.find_empty_test_case(agent.id)
+        if empty_test_case:
+            return empty_test_case
+
+    test_case_count = await test_cases_repo.count_by_agent(agent.id)
+    new_thread = await ThreadRepository(db).add(
         Thread(
             agent_id=agent.id,
             user_id=user.id,
             is_test_case=True,
-            name=f"Test Case #{len(test_cases) + 1}"
+            name=f"Test Case #{test_case_count + 1}"
         )
     )
-    return await test_cases_repo.save(
+
+    test_case = await test_cases_repo.save(
         TestCase(
-            thread_id=thread.id,
-            agent_id=agent.id,
+            thread_id=new_thread.id,
+            agent_id=agent.id
         )
     )
+
+    if source_chat_messages:
+        prev_origin = None
+        for message in source_chat_messages:
+            # Insert empty agent message if two consecutive user messages
+            if prev_origin == ThreadMessageOrigin.USER and message.origin == ThreadMessageOrigin.USER:
+                await thread_message_repo.add(ThreadMessage(
+                    thread_id=new_thread.id,
+                    origin=ThreadMessageOrigin.AGENT,
+                    text=""
+                ))
+            await thread_message_repo.add(ThreadMessage(
+                thread_id=new_thread.id,
+                origin=message.origin,
+                text=message.text or ""
+            ))
+            prev_origin = message.origin
+        try:
+            test_case = await _generate_test_case_name(test_case, user, db)
+        except Exception:
+            logger.warning("Failed to generate test case name for test case %s", test_case.thread_id, exc_info=True)
+        return test_case
+
+    return test_case
 
 
 TEST_SUITE_RUNS_PATH = f"{TEST_CASES_PATH}/runs"
@@ -110,8 +158,8 @@ async def run_test_suite(
         engine = AgentEngine(agent, user.id, db)
         async with AsyncExitStack() as stack:
             await engine.load_tools(stack)
-    except ToolOAuthRequest as e:
-        raise build_tool_oauth_request_http_exception(e)
+    except ToolAuthRequestException as e:
+        raise build_tool_auth_request_http_exception(e.request)
 
     suite_run = await suite_repo.add(TestSuiteRun(
         agent_id=agent.id,
@@ -363,28 +411,29 @@ async def add_message(agent_id: int, test_case_id: int, message: NewTestCaseMess
     return added_message
 
 
-async def _generate_test_case_name(test_case: TestCase, user: User, db: AsyncSession):
+async def _generate_test_case_name(test_case: TestCase, user: User, db: AsyncSession) -> TestCase:
     if not test_case.is_default_name():
-        return
+        return test_case
 
     messages = await ThreadMessageRepository(db).find_by_thread_id(test_case.thread_id)
     user_message = next((m for m in messages if m.origin == ThreadMessageOrigin.USER and m.text and m.text.strip()), None)
     agent_message = next((m for m in messages if m.origin == ThreadMessageOrigin.AGENT and m.text and m.text.strip()), None)
     if not user_message or not agent_message:
-        return
+        return test_case
 
     agent = cast(Agent, await AgentRepository(db).find_by_id(test_case.agent_id))
     try:
         generated_name = await generate_test_case_name(agent, user_message.text.strip(), agent_message.text.strip(), user.id, db)
     except Exception:
         logger.warning("Failed to generate test case name for test case %s", test_case.thread_id, exc_info=True)
-        return
+        return test_case
 
     trimmed_name = generated_name.strip()
     if not trimmed_name or trimmed_name == test_case.thread.name:
-        return
+        return test_case
     test_case.thread.name = trimmed_name
-    await ThreadRepository(db).update(test_case.thread)
+    test_case.thread = await ThreadRepository(db).update(test_case.thread)
+    return test_case
 
 
 TEST_CASE_MESSAGE_PATH = f"{TEST_CASE_MESSAGES_PATH}/{{message_id}}"
@@ -403,3 +452,16 @@ async def update_message(agent_id: int, test_case_id: int, message_id: int, mess
     test_case.last_update = datetime.now(timezone.utc)
     await TestCaseRepository(db).save(test_case)
     return test_case_message
+
+
+@router.delete(TEST_CASE_MESSAGE_PATH, status_code=status.HTTP_204_NO_CONTENT)
+async def delete_message_and_following(agent_id: int, test_case_id: int, message_id: int, user: Annotated[User, Depends(get_current_user)],
+        db: Annotated[AsyncSession, Depends(get_db)]):
+    test_case = await find_test_case_by_id(test_case_id, agent_id, user, db)
+    repo = ThreadMessageRepository(db)
+    test_case_message = await repo.find_by_id(message_id)
+    if test_case_message is None or test_case_message.thread_id != test_case.thread_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    await repo.delete_from_date(test_case.thread_id, test_case_message.timestamp)
+    test_case.last_update = datetime.now(timezone.utc)
+    await TestCaseRepository(db).save(test_case)

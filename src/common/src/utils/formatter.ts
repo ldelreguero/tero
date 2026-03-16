@@ -2,7 +2,6 @@ import { nextTick, ref } from 'vue'
 import MarkdownIt from 'markdown-it'
 import MarkdownItPlantuml from 'markdown-it-plantuml'
 import Token from 'markdown-it/lib/token'
-import 'highlight.js/styles/stackoverflow-light.css'
 import hljs from 'highlight.js'
 import { escapeHtml } from 'markdown-it/lib/common/utils'
 import copyIcon from '../assets/images/copy-icon.svg?raw'
@@ -32,7 +31,7 @@ const useTables = (md: MarkdownIt) => {
   const downloadButton = `
     <div class="flex mt-4">
       <button
-        class="inline-flex items-center whitespace-nowrap rounded-xl bg-surface border border-auxiliar-gray px-3 py-1.5 gap-1 text-light-gray"
+        class="inline-flex items-center whitespace-nowrap rounded-xl bg-surface border px-3 py-1.5 gap-1 text-content-muted"
         onclick="downloadTableCSV(this)"
       >
         ${csvIcon} ${CSV_FILENAME}
@@ -56,15 +55,15 @@ const useTables = (md: MarkdownIt) => {
     }
   })
 
-  md.renderer.rules.td_open = () => '<td class="break-words border border-auxiliar-gray px-4 py-2">'
-  md.renderer.rules.th_open = () => '<th class="break-words border border-auxiliar-gray px-4 py-2 bg-pale !font-medium">'
+  md.renderer.rules.td_open = () => '<td class="break-words border px-4 py-2">'
+  md.renderer.rules.th_open = () => '<th class="break-words border px-4 py-2 bg-surface-muted !font-medium">'
   md.renderer.rules.table_close = () => '</table>'
-  md.renderer.rules.tbody_open = () => '<tbody class="divide-y divide-auxiliar-gray">'
+  md.renderer.rules.tbody_open = () => '<tbody class="divide-y divide-border">'
 }
 
 const useCodeInline = (md: MarkdownIt) => {
   md.renderer.rules.code_inline = (tokens, idx) => {
-    return `<code class="bg-pale p-0.5 rounded-md text-sm font-mono">${md.utils.escapeHtml(tokens[idx].content)}</code>`
+    return `<code class="bg-surface-muted p-0.5 rounded-md text-sm font-mono">${md.utils.escapeHtml(tokens[idx].content)}</code>`
   }
 }
 
@@ -101,7 +100,7 @@ const listBulletPlugin = (md: MarkdownIt): void => {
 
 const blockquotePlugin = (md: MarkdownIt): void => {
   md.renderer.rules.blockquote_open = () => {
-    return `<blockquote class="flex gap-3 my-2 px-6 py-4 border-l-8 border-pale">`
+    return `<blockquote class="flex gap-3 my-2 px-6 py-4 border-l-8 border-surface-muted">`
   }
 
   md.renderer.rules.blockquote_close = () => {
@@ -162,14 +161,14 @@ export const renderMarkDown = (text: string, isComplete: boolean, t?: (key: stri
       if (lang) {
         const copyButtonText = t ? t('copyCodeButton') : 'Copy'
         let code = `<pre class="b-1 my-3">
-        <div class="flex items-center justify-between p-2 bg-pale border-t border-l border-r border-auxiliar-gray rounded-t-lg">
-          <span class="text-xs lowercase text-dark-gray font-[sora]">${lang}</span>
-          <button class="copy-code-btn flex items-center text-xs text-dark-gray hover:text-dark transition">
+        <div class="flex items-center justify-between p-2 bg-surface-muted border-t border-l border-r rounded-t-lg">
+          <span class="text-xs lowercase text-content font-[sora]">${lang}</span>
+          <button class="copy-code-btn flex items-center text-xs text-content hover:text-dark transition">
             ${copyIcon}
             <span class="font-[sora]">${copyButtonText}</span>
           </button>
         </div>
-        <code class="block p-2 bg-surface-muted border border-auxiliar-gray rounded-b-lg overflow-x-auto">`.replace(/  |\r\n|\n|\r/gm, '')
+        <code class="block p-2 bg-surface-muted border rounded-b-lg overflow-x-auto">`.replace(/  |\r\n|\n|\r/gm, '')
         if (hljs.getLanguage(lang)) {
           try {
             code += hljs.highlight(str, { language: lang }).value

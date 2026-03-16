@@ -23,7 +23,7 @@ from ..files.domain import File, FileStatus, FileMetadata, FileProcessor, FileMe
 from ..files.file_quota import FileQuota, CurrentQuota, QuotaExceededError
 from ..files.parser import add_encoding_to_content_type, extract_file_text
 from ..files.repos import FileRepository
-from ..tools.oauth import ToolOAuthRequest, build_tool_oauth_request_http_exception
+from ..tools.auth import ToolAuthRequestException, build_tool_auth_request_http_exception
 from ..usage.domain import Usage, UsageType, MessageUsage
 from ..usage.repos import UsageRepository
 from ..users.domain import User
@@ -172,8 +172,8 @@ async def add_message(thread_id: int, request: Request, user: Annotated[User, De
             with_heartbeat(_agent_response(user_message, thread, user.id, db, is_in_agent_edition)),
             media_type="text/event-stream",
         )
-    except ToolOAuthRequest as e:
-        raise build_tool_oauth_request_http_exception(e)
+    except ToolAuthRequestException as e:
+        raise build_tool_auth_request_http_exception(e.request)
 
     except QuotaExceededError:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail="quotaExceeded")

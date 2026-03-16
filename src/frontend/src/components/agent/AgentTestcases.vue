@@ -142,7 +142,7 @@ const onCloneTestCase = async (testCase: TestCase) => {
                 ]" />
             </div>
         </div>
-        <div class="flex flex-col gap-2 min-h-0 overflow-y-auto">
+        <div class="flex flex-col w-full gap-2 h-full min-h-0 overflow-y-auto">
             <div v-for="testCase in testCasesStore.testCases" :key="testCase.thread.id">
                 <Animate v-if="deletingTestCaseId === testCase.thread.id" :effect="AnimationEffect.QUICK_SLIDE_DOWN">
                     <ItemConfirmation class="shadow-none !m-0"
@@ -155,7 +155,7 @@ const onCloneTestCase = async (testCase: TestCase) => {
                         :on-cancel="onCancelRenameTestCase" class="w-full" />
                 </Animate>
                 <div v-else
-                    class="border-1 border-auxiliar-gray rounded-xl px-3 py-2 cursor-pointer shadow-xs group h-[50px]"
+                    class="border-1 rounded-xl px-3 py-2 cursor-pointer shadow-xs group h-[50px]"
                     @click="testCasesStore.setSelectedTestCase(testCase)"
                     :class="{ '!border-abstracta': testCasesStore.selectedTestCase?.thread.id === testCase.thread.id }">
                     <div class="flex items-center justify-between h-full">

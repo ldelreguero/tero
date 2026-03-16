@@ -4,12 +4,12 @@ import { useI18n } from 'vue-i18n';
 import { onMounted, ref, watch, computed, nextTick } from 'vue';
 import { ApiService, HttpError } from '@/services/api';
 import { AgentTestcaseChatUiMessage } from './AgentTestcaseChatMessage.vue';
-import ChatInput from '../../../../common/src/components/chat/ChatInput.vue';
+import AgentTestcaseInput from './AgentTestcaseInput.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 import { AnimationEffect } from '../../../../common/src/utils/animations';
 import { useTestExecutionStore } from '@/composables/useTestExecutionStore';
 import { useTestCaseStore } from '@/composables/useTestCaseStore';
-import { IconArrowLeft, IconPencil, IconLoader2 } from '@tabler/icons-vue';
+import { IconArrowLeft, IconPencil, IconLoader2, IconSquareCheckFilled, IconSquareXFilled, IconSquareChevronsRightFilled } from '@tabler/icons-vue';
 
 const api = new ApiService()
 const { t } = useI18n()
@@ -33,9 +33,15 @@ const messages = ref<AgentTestcaseChatUiMessage[]>([])
 const testSpecMessages = ref<AgentTestcaseChatUiMessage[]>([])
 const inputText = ref('')
 const selectedMessage = ref<AgentTestcaseChatUiMessage | undefined>()
-const chatInputRef = ref<InstanceType<typeof ChatInput>>()
+const testcaseInputRef = ref<InstanceType<typeof AgentTestcaseInput>>()
+const editingMessageUuid = ref<string | undefined>()
+const editingMessageText = ref('')
+const editingMessageOriginalText = ref('')
+const editingInputRefs = ref<Map<string, InstanceType<typeof AgentTestcaseInput>>>(new Map())
 const isLoading = ref(false)
 const isComparingResultWithTestSpec = ref(false)
+const showDeleteConfirmation = ref(false)
+const messageToDelete = ref<AgentTestcaseChatUiMessage | undefined>()
 const isRunning = computed(() => {
     if (executionState.value) {
         return executionState.value.phase === 'executing' || executionState.value.phase === 'evaluating'
@@ -110,12 +116,12 @@ const mapMessagesToAgentTestcaseChatUi = (msgs: ThreadMessage[], usePlaceholders
     const result: AgentTestcaseChatUiMessage[] = msgs.map((msg, index) => {
         const isUser = index % 2 === 0
         const placeholderText = isUser ? t('userMessagePlaceholder') : t('agentMessagePlaceholder')
-        const text = msg.text || (usePlaceholders ? placeholderText : '')
+        const text = msg.text ?? (usePlaceholders ? placeholderText : '')
 
         return new AgentTestcaseChatUiMessage(
             text,
             isUser,
-            usePlaceholders && !msg.text,
+            usePlaceholders && msg.text == null,
             msg.id,
             msg.statusUpdates
         )
@@ -137,10 +143,77 @@ const mapMessagesToAgentTestcaseChatUi = (msgs: ThreadMessage[], usePlaceholders
 }
 
 const handleSelectMessage = async (message: AgentTestcaseChatUiMessage) => {
-    selectedMessage.value = message
-    await nextTick()
-    chatInputRef.value?.focus()
-    inputText.value = message.isPlaceholder ? '' : message.text
+    if (message.isPlaceholder) {
+        editingMessageUuid.value = undefined
+        selectedMessage.value = message
+        await nextTick()
+        testcaseInputRef.value?.focus()
+        inputText.value = ''
+    } else {
+        editingMessageUuid.value = message.uuid
+        editingMessageText.value = message.text
+        editingMessageOriginalText.value = message.text
+        selectedMessage.value = undefined
+        await nextTick()
+        editingInputRefs.value.get(message.uuid)?.focus()
+    }
+}
+
+const handleInlineEditSave = async (message: AgentTestcaseChatUiMessage) => {
+    message.text = editingMessageText.value
+    message.isPlaceholder = false
+    editingMessageUuid.value = undefined
+    editingMessageText.value = ''
+    
+    let currentTestCase = testCase.value;
+    if (!currentTestCase) {
+        currentTestCase = await addTestCase(props.agentId)
+        setSelectedTestCase(currentTestCase)
+    }
+    saveMessageAsync(message, currentTestCase)
+
+    const allMessagesSaved = messages.value.every(m => !m.isPlaceholder)
+    if (allMessagesSaved) {
+        const newUserPlaceholder = new AgentTestcaseChatUiMessage(
+            t('userMessagePlaceholder'),
+            true,
+            true
+        )
+        const newAgentPlaceholder = new AgentTestcaseChatUiMessage(
+            t('agentMessagePlaceholder'),
+            false,
+            true
+        )
+        messages.value.push(newUserPlaceholder)
+        messages.value.push(newAgentPlaceholder)
+
+        selectedMessage.value = newUserPlaceholder
+        inputText.value = ''
+        await nextTick()
+        testcaseInputRef.value?.focus()
+        return
+    }
+
+    if(getLastPlaceholder()) await selectNextMessageOrPlaceholder()
+    else selectedMessage.value = undefined
+}
+
+const handleInlineEditCancel = async () => {
+    const message = messages.value.find(m => m.uuid === editingMessageUuid.value)
+    if (message) {
+        message.text = editingMessageOriginalText.value
+    }
+    editingMessageUuid.value = undefined
+    editingMessageText.value = ''
+    editingMessageOriginalText.value = ''
+    
+    const lastPlaceholder = getLastPlaceholder()
+    if (lastPlaceholder) {
+        selectedMessage.value = lastPlaceholder
+        inputText.value = ''
+        await nextTick()
+        testcaseInputRef.value?.focus()
+    }
 }
 
 const handleSelectTestCase = async (newTestCase: TestCase | undefined) => {
@@ -158,7 +231,7 @@ const handleSelectTestCase = async (newTestCase: TestCase | undefined) => {
 }
 
 watch(() => testCase.value, async (newVal, oldVal) => {
-    if ((newVal?.thread.id !== oldVal?.thread.id || props.isNewTestCase) && testCasesStore.testCases.length > 1) {
+    if ((newVal?.thread.id !== oldVal?.thread.id || props.isNewTestCase) && (testCasesStore.testCases.length > 1 || !oldVal)) {
         await handleSelectTestCase(newVal)
     }
 })
@@ -173,6 +246,11 @@ watch([() => props.isEditing, () => props.isNewTestCase], async () => {
 
 watch(executionState, (newState) => {
     if (!newState) {
+        const lastAgentMsg = messages.value.slice().reverse().find((m: AgentTestcaseChatUiMessage) => !m.isUser)
+        if (lastAgentMsg && (lastAgentMsg.isStreaming || !lastAgentMsg.isStatusComplete)) {
+            lastAgentMsg.isStreaming = false
+            lastAgentMsg.completeStatus()
+        }
         return
     }
 
@@ -261,7 +339,7 @@ const onMessageSend = async () => {
         selectedMessage.value = newUserPlaceholder
         inputText.value = ''
         await nextTick()
-        chatInputRef.value?.focus()
+        testcaseInputRef.value?.focus()
         return
     }
 
@@ -304,12 +382,22 @@ const selectNextMessageOrPlaceholder = async () => {
     await nextTick()
     inputText.value = selectedMessage.value?.isPlaceholder ? '' : selectedMessage.value?.text || ''
     if (selectedMessage.value) {
-        chatInputRef.value?.focus()
+        testcaseInputRef.value?.focus()
     }
 }
 
 const getLastPlaceholder = () => {
     return messages.value.find(m => m.isPlaceholder)
+}
+
+const selectFirstPlaceholder = async () => {
+    const firstPlaceholder = messages.value.find(m => m.isPlaceholder)
+    if (firstPlaceholder) {
+        selectedMessage.value = firstPlaceholder
+        inputText.value = ''
+        await nextTick()
+        testcaseInputRef.value?.focus()
+    }
 }
 
 const isMessageSelectable = (message: AgentTestcaseChatUiMessage) => {
@@ -379,6 +467,31 @@ const isTestCaseResultTestModifiedAfterExecution = computed(() => {
     return testCaseResultTest.value?.lastUpdate! > testCaseResult.value?.executedAt!
 })
 
+const handleDeleteMessageRequest = (message: AgentTestcaseChatUiMessage) => {
+    messageToDelete.value = message
+    showDeleteConfirmation.value = true
+}
+
+const cancelDeleteMessage = () => {
+    showDeleteConfirmation.value = false
+    messageToDelete.value = undefined
+}
+
+const confirmDeleteMessage = async () => {
+    try {
+        await api.deleteTestCaseMessageAndFollowing(props.agentId, testCaseId.value!, messageToDelete.value!.id!)
+        await loadTestCaseData()
+        if (testCaseId.value) {
+            await refreshTestCase(props.agentId, testCaseId.value)
+        }
+        selectFirstPlaceholder()
+    } catch (error) {
+        handleError(error)
+    } finally {
+        cancelDeleteMessage()
+    }
+}
+
 defineExpose({
     loadTestCaseData,
     isComparingResultWithTestSpec,
@@ -402,12 +515,12 @@ defineExpose({
                       t('newTestCaseTitle') }}
               </div>
               <div v-else class="flex gap-2 items-center">
-                  <IconLoader2 v-if="isRunning" class="text-light-gray animate-spin" />
+                  <IconLoader2 v-if="isRunning" class="text-content-muted animate-spin" />
                   <div v-if="testCaseResult" class="flex flex-row items-center gap-2">
-                    <IconSquareCheckFilled class="text-success" v-if="testCaseResult.status === TestCaseResultStatus.SUCCESS" v-tooltip.bottom="t('success')" />
-                    <IconSquareXFilled class="text-error" v-if="testCaseResult.status === TestCaseResultStatus.FAILURE" v-tooltip.bottom="t('failure')" />
+                    <SimpleIcon filled :icon="IconSquareCheckFilled" class="text-success" v-if="testCaseResult.status === TestCaseResultStatus.SUCCESS" v-tooltip.bottom="t('success')" />
+                    <SimpleIcon filled :icon="IconSquareXFilled" class="text-error" v-if="testCaseResult.status === TestCaseResultStatus.FAILURE" v-tooltip.bottom="t('failure')" />
                     <IconExclamationMark class="text-white bg-warn rounded-sm p-0.5" size="20" v-if="testCaseResult.status === TestCaseResultStatus.ERROR" v-tooltip.bottom="t('error')" />
-                    <IconSquareChevronsRightFilled class="text-light-gray" v-if="testCaseResult.status === TestCaseResultStatus.SKIPPED" v-tooltip.bottom="t('skipped')" />
+                    <SimpleIcon filled :icon="IconSquareChevronsRightFilled" class="text-content-muted" v-if="testCaseResult.status === TestCaseResultStatus.SKIPPED" v-tooltip.bottom="t('skipped')" />
                     {{ testCaseResult ? isRunning ? t('runningTestCase', { testCaseName: testCaseResult.testCaseName }) : t('testCaseResult', { testCaseName: testCaseResult.testCaseName }) : t('noRunResults') }}
                 </div>
               </div>
@@ -422,53 +535,53 @@ defineExpose({
         <div class="max-w-[837px] mx-auto flex-1 w-full min-h-0">
             <div class="flex flex-col h-full gap-4 py-4">
                 <div class="flex flex-1 min-h-0 gap-2 w-full overflow-y-auto">
-                    <div v-if="messages.length > 0 && (isEditing || (testCaseResult?.status !== TestCaseResultStatus.ERROR && testCaseResult?.status !== TestCaseResultStatus.PENDING))" class="flex flex-col w-full">
+                    <div v-if="messages.length > 0 && (isEditing || (testCaseResult?.status !== TestCaseResultStatus.ERROR && testCaseResult?.status !== TestCaseResultStatus.PENDING))" class="flex flex-col w-full pt-6">
                         <div v-for="message in messages" :key="message.uuid">
                             <div v-if="!message.isUser && message.statusUpdates.length > 0" class="px-2 py-3">
                                 <ChatStatus :status-updates="message.statusUpdates" :is-complete="message.isStatusComplete" />
                             </div>
-                            <AgentTestcaseChatMessage :message="message"
+                            <AgentTestcaseChatMessage 
+                                v-if="editingMessageUuid !== message.uuid"
+                                :message="message"
                                 :actions-enabled="!message.isPlaceholder && isEditing"
-                                :is-selected="selectedMessage?.uuid === message.uuid" @select="handleSelectMessage"
+                                :is-selected="selectedMessage?.uuid === message.uuid" 
+                                @select="handleSelectMessage"
+                                @delete="handleDeleteMessageRequest"
                                 :selectable="isMessageSelectable(message)" />
+                            <AgentTestcaseInput
+                                v-else
+                                :ref="(el) => { if (el) editingInputRefs.set(message.uuid, el as InstanceType<typeof AgentTestcaseInput>) }"
+                                :selected-message="message"
+                                v-model="editingMessageText"
+                                :handle-error="handleError"
+                                :is-editing="true"
+                                :agent-id="agentId"
+                                @save="handleInlineEditSave(message)"
+                                @cancel="handleInlineEditCancel" />
                         </div>
                     </div>
                 </div>
-                <div v-if="isEditing && selectedMessage"
-                    class="flex flex-col gap-1 p-3 relative rounded-xl border border-auxiliar-gray focus-within:border-abstracta bg-surface shadow-sm"
-                    :class="selectedMessage ? selectedMessage?.isUser ? '!border-primary' : '!border-info' : ''">
-                    <span class="absolute top-[-.85rem] right-20 font-semibold rounded-full px-4 py-1 text-sm z-10"
-                        :class="{ 'bg-abstracta text-white': selectedMessage?.isUser, 'bg-info text-white': !selectedMessage?.isUser }">
-                        {{ selectedMessage?.isUser ? t('user') : t('agent') }}</span>
-                    <ChatInput
-                        v-model="inputText"
-                        ref="chatInputRef"
-                        :chat="{
-                            supportsStopResponse: () => false,
-                            findPrompts: async () => [],
-                            savePrompt: async () => {},
-                            deletePrompt: async (id: number) => {},
-                            supportsFileUpload: () => false,
-                            supportsTranscriptions: () => false,
-                            transcribe: async (blob: Blob) => '',
-                            handleError: handleError
-                        }"
-                        :borderless="true"
-                        @send="onMessageSend">
-                    </ChatInput>
-                </div>
+                <AgentTestcaseInput
+                    v-if="isEditing && selectedMessage"
+                    ref="testcaseInputRef"
+                    :selected-message="selectedMessage"
+                    v-model="inputText"
+                    :handle-error="handleError"
+                    :agent-id="agentId"
+                    @send="onMessageSend"
+                    :enable-prompts="true" />
                 <div v-else-if="!isEditing && (testCaseResult || executionState)"
-                    class="h-40 min-h-40 flex-shrink-0 border-t-1 border-auxiliar-gray p-4">
+                    class="h-40 min-h-40 flex-shrink-0 border-t-1 p-4">
                     <div class="flex flex-col gap-4 h-full">
                         <AgentTestcaseStatus v-if="!isRunning && testCaseResult" :status="testCaseResult.status" />
                         <div class="h-full overflow-y-auto">
                             <div v-if="executionState && (executionState.phase === 'executing' || executionState.phase === 'evaluating')" class="flex flex-row items-center gap-2">
-                                <IconLoader2 class="text-light-gray animate-spin" />
+                                <IconLoader2 class="text-content-muted animate-spin" />
                                 <span v-if="executionState.phase === 'executing'">{{ t('phaseExecuting') }}</span>
                                 <span v-else>{{ t('phaseEvaluating') }}</span>
                             </div>
                             <div v-else-if="isRunning" class="flex flex-row items-center gap-2">
-                                <IconLoader2 class="text-light-gray animate-spin" />
+                                <IconLoader2 class="text-content-muted animate-spin" />
                                 <span>{{ t('testRunning') }}</span>
                             </div>
                             <div v-else-if="testCaseResult" class="flex flex-row items-center gap-2">
@@ -480,6 +593,18 @@ defineExpose({
             </div>
         </div>
     </FlexCard>
+    <Dialog v-model:visible="showDeleteConfirmation" :header="t('deleteConfirmTitle')" :modal="true" :draggable="false"
+        :resizable="false" :closable="false" class="max-w-150">
+        <div class="flex flex-col gap-5">
+            <div class="flex flex-row gap-2 items-start whitespace-pre-line">
+                {{ t('deleteConfirmDescription') }}
+            </div>
+            <div class="flex flex-row gap-2 justify-end">
+                <SimpleButton @click="cancelDeleteMessage" shape="square" variant="secondary">{{ t('cancelDeleteButton') }}</SimpleButton>
+                <SimpleButton @click="confirmDeleteMessage" variant="error" shape="square">{{ t('deleteButton') }}</SimpleButton>
+            </div>
+        </div>
+    </Dialog>
 </template>
 
 <i18n lang="json">
@@ -507,7 +632,11 @@ defineExpose({
         "success": "Success",
         "failure": "Failed",
         "error": "Error running",
-        "skipped": "Skipped"
+        "skipped": "Skipped",
+        "deleteConfirmTitle": "Delete message",
+        "deleteConfirmDescription": "Are you sure you want to delete this message and all following messages? This action cannot be undone.",
+        "cancelDeleteButton": "Cancel",
+        "deleteButton": "Delete"
     },
     "es": {
         "newTestCaseTitle": "Crea un nuevo test case",
@@ -532,7 +661,11 @@ defineExpose({
         "success": "Pasó",
         "failure": "Falló",
         "error": "Error al ejecutar",
-        "skipped": "Omitido"
+        "skipped": "Omitido",
+        "deleteConfirmTitle": "Eliminar mensaje",
+        "deleteConfirmDescription": "¿Estás seguro de que deseas eliminar este mensaje y todos los siguientes? Esta acción no se puede deshacer.",
+        "cancelDeleteButton": "Cancelar",
+        "deleteButton": "Eliminar"
     }
 }
 </i18n>

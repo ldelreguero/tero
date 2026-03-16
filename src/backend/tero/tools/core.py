@@ -18,9 +18,12 @@ from ..core.domain import CamelCaseModel
 from ..files.domain import File, FileMetadata
 from ..files.repos import FileRepository
 from ..threads.domain import AgentActionEvent, AgentAction
-from ..tools.oauth import ToolAuthCallback, ToolOAuthState
+from ..tools.auth import ToolAuthCallback
 from ..usage.domain import ToolUsage
 from ..users.domain import User
+
+
+_SECRET_MASK = "********"
 
 
 def load_schema(tool_path: str) -> dict:
@@ -105,6 +108,7 @@ class AgentTool(CamelCaseModel, abc.ABC):
     _agent: Optional[Agent] = None
     _user_id: Optional[int] = None
     _config: Optional[dict] = None
+    _secrets: Optional[dict] = None
     _db: Optional[AsyncSession] = None
     _thread_id: Optional[int] = None
 
@@ -133,15 +137,28 @@ class AgentTool(CamelCaseModel, abc.ABC):
         return cast(AsyncSession, self._db)
 
     # this method is invoked when the tool is configured or the configuration changes
-    async def setup(self, prev_config: Optional[AgentToolConfig]) -> dict:
+    # this method will automatically extract and mask secrets in the configuration
+    # use _get_secret method to get the secrets inside _setup_tool method
+    async def setup(self, prev_config: Optional[AgentToolConfig]):
         try:
             # files are uploaded to endpoint and not included in file config body
             # they are included in schema so frontend knows if files can be uploaded for this tool
             jsonschema.validate(self._config, self.get_schema_without_files(self.config_schema))
         except jsonschema.ValidationError as e:
             raise ValueError(f"Invalid configuration: {e.message}")
-        ret = await self._setup_tool(prev_config)
-        return ret or cast(dict, self._config)
+        self._secrets = self._extract_secrets()
+        self._config = self._mask_secrets()
+        await self._setup_tool(prev_config)
+
+    def _extract_secrets(self) -> dict:
+        return {key: value for key, value in cast(dict, self._config).items() if self.config_schema.get("properties", {}).get(key, {}).get("writeOnly")}
+
+    def _mask_secrets(self) -> dict:
+        return {key: _SECRET_MASK if key in self._secrets else value for key, value in cast(dict, self._config).items()}
+
+    def _get_secret(self, key: str) -> Optional[str]:
+        ret = cast(dict, self._secrets).get(key)
+        return ret if ret != _SECRET_MASK else None
 
     def get_schema_without_files(self, schema: dict) -> dict:
         file_props = []
@@ -177,10 +194,9 @@ class AgentTool(CamelCaseModel, abc.ABC):
         return bool(ref and ref.endswith("/File"))
 
     # override this method to perform any setup that is persistent across agent tool usages (eg: create tables or any resources, etc)
-    # overrides can return a dict with the modified tool configuration in case some values should be changed before saving them in db for later use by frontend (for example storage of secrets)
-    # if no changes are needed in tool configuration just return None
+    # use _get_secret method to get the secrets already extracted by setup method
     @abc.abstractmethod
-    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]) -> Optional[dict]:
+    async def _setup_tool(self, prev_config: Optional[AgentToolConfig]):
         pass
 
     # override this method to perform any teardown when the tool is removed from an anget (eg: drop tables or any resources, etc)
@@ -198,6 +214,7 @@ class AgentTool(CamelCaseModel, abc.ABC):
         raise NotImplementedError()
     
     # override this method to perform some initialization that is required for using the agent tool (eg: trigger user authentication, etc)
+    # this method should raise a ToolAuthRequestException if authentication is required to use the tool and the user hasn't authenticated yet
     @abc.abstractmethod
     @asynccontextmanager
     async def load(self) -> AsyncIterator['AgentTool']:
@@ -207,7 +224,9 @@ class AgentTool(CamelCaseModel, abc.ABC):
     async def build_langchain_tools(self) -> List[BaseTool]:
         pass
 
-    async def auth(self, auth_callback: ToolAuthCallback, state: ToolOAuthState):
+    # this method is invoked when trying to complete authentication either by setup (when using oauth) or 
+    # when a user first interacts with the tool and sends the authentication token
+    async def auth(self, auth_callback: ToolAuthCallback):
         raise NotImplementedError()
     
     # override this method to perform any cloning that is required for using the agent tool (eg: clone embeddings, etc)

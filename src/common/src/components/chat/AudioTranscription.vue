@@ -18,8 +18,10 @@ const VISUALIZER_CONFIG = {
   powerFactor: 0.4,         // Controls the non-linear scaling of the bars - lower values create more dramatic peaks
   minBarHeight: 1,          // Minimum bar height in pixels
   zeroLevel: 128,           // Reference point for silence in audio signal (used for normalization)
-  color: '#3c1464'      
 }
+
+const getVisualizerColor = () => 
+  getComputedStyle(document.documentElement).getPropertyValue('--color-abstracta').trim() || '#3c1464'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const audioURL = ref<string | null>(null)
@@ -92,7 +94,7 @@ const draw = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
   const barHeight = calculateBarHeight(dataArray, canvas)
   const y = (canvas.height - barHeight) / 2
 
-  ctx.fillStyle = VISUALIZER_CONFIG.color
+  ctx.fillStyle = getVisualizerColor()
   drawRoundedBar( ctx, x, y, VISUALIZER_CONFIG.barWidth, barHeight, VISUALIZER_CONFIG.barWidth)
 
   x += VISUALIZER_CONFIG.barWidth + VISUALIZER_CONFIG.barSpacing

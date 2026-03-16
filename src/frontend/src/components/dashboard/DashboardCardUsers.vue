@@ -165,7 +165,7 @@ const handleConfirmDeleteUser = async () => {
 
 <template>
   <div v-if="loading" class="w-full h-full">
-    <div class="bg-pale rounded-lg p-4 animate-pulse">
+    <div class="bg-surface-muted rounded-lg p-4 animate-pulse">
       <div class="h-5 bg-auxiliar-gray rounded w-32 mb-6"></div>
       <div class="space-y-4">
         <div v-for="i in pageSize" :key="i" class="flex justify-between items-center py-2">
@@ -186,7 +186,7 @@ const handleConfirmDeleteUser = async () => {
       <Column field="userName">
         <template #body="slotProps">
           <div class="flex items-center gap-1 h-8">
-            <span :class="{ 'text-light-gray line-through': slotProps.data.roleStatus === TeamRoleStatus.REJECTED }">
+            <span :class="{ 'text-content-muted line-through': slotProps.data.roleStatus === TeamRoleStatus.REJECTED }">
               {{ slotProps.data.name || slotProps.data.username }}
             </span>
           </div>
@@ -195,11 +195,11 @@ const handleConfirmDeleteUser = async () => {
       <Column field="role" class="w-15">
         <template #body="slotProps">
           <div v-if="(slotProps.data.roleStatus == TeamRoleStatus.ACCEPTED && slotProps.data.verified) || editingRoleRows.includes(slotProps.data.id)" class="flex items-center justify-end">
-            <span v-if="!editingRoleRows.includes(slotProps.data.id)" class="block w-full text-right text-light-gray">{{ roleNames[slotProps.data.role as Role] }}</span>
+            <span v-if="!editingRoleRows.includes(slotProps.data.id)" class="block w-full text-right text-content-muted">{{ roleNames[slotProps.data.role as Role] }}</span>
             <Select v-else v-model="slotProps.data.role" :options="Object.entries(roleNames).map(([key, value]) => ({ label: value, value: key }))" option-label="label" option-value="value" @change="handleRoleChange(slotProps.data)" />
           </div>
           <div v-else class="flex items-center w-full justify-end">
-            <SimpleTag v-if="slotProps.data.roleStatus === TeamRoleStatus.REJECTED" :text="t('rejectedInvitation')" class="bg-pale !text-light-gray" />
+            <SimpleTag v-if="slotProps.data.roleStatus === TeamRoleStatus.REJECTED" :text="t('rejectedInvitation')" class="bg-surface-muted !text-content-muted" />
             <SimpleTag v-else-if="slotProps.data.roleStatus === TeamRoleStatus.PENDING || !slotProps.data.verified" :text="t('pendingInvitation')" />
           </div>
         </template>
@@ -210,7 +210,7 @@ const handleConfirmDeleteUser = async () => {
         </template>
       </Column>
     </DataTable>
-    <span v-if="users.length === 0" class="text-light-gray">
+    <span v-if="users.length === 0" class="text-content-muted">
       {{ t('noUsersFound') }}
     </span>
     <template #footer>

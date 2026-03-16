@@ -9,7 +9,7 @@ from sse_starlette import ServerSentEvent
 from .common import *
 
 from tero.agents.test_cases.api import TEST_CASES_PATH, TEST_CASE_PATH, TEST_CASE_CLONE_PATH, TEST_CASE_MESSAGES_PATH, TEST_CASE_MESSAGE_PATH, TEST_SUITE_RUN_RESULTS_PATH, TEST_SUITE_RUN_RESULT_MESSAGE_PATH
-from tero.agents.test_cases.domain import TestCaseResult, TestCaseResultStatus, NewTestCaseMessage, UpdateTestCaseMessage, PublicTestCase, TestSuiteRun, TestSuiteRunStatus
+from tero.agents.test_cases.domain import TestCaseResult, TestCaseResultStatus, NewTestCaseMessage, UpdateTestCaseMessage, PublicTestCase, TestSuiteRun, TestSuiteRunStatus, CreateTestCase
 from tero.threads.domain import ThreadMessageOrigin, ThreadMessagePublic, Thread
 from tero.tools.core import AgentActionEvent, AgentAction
 
@@ -118,12 +118,113 @@ async def test_add_test_case(client: AsyncClient, test_cases: List[PublicTestCas
     )])
 
 
-async def _add_test_case(agent_id: int, client: AsyncClient) -> Response:
-    return await client.post(TEST_CASES_PATH.format(agent_id=agent_id))
+async def _add_test_case(agent_id: int, client: AsyncClient, create_options: Optional[CreateTestCase] = None) -> Response:
+    json_body = create_options.model_dump(by_alias=True, exclude_none=True) if create_options else None
+    return await client.post(TEST_CASES_PATH.format(agent_id=agent_id), json=json_body)
 
 
 async def test_add_test_case_unauthorized_agent(client: AsyncClient):
     resp = await _add_test_case(NON_VISIBLE_AGENT_ID, client)
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+@freeze_time(CURRENT_TIME)
+async def test_add_test_case_from_existing_chat(client: AsyncClient, last_thread_id: int, last_message_id: int):
+    source_thread_id = THREAD_ID
+    new_thread_id = last_thread_id + 1
+    
+    resp = await _add_test_case(AGENT_ID, client, CreateTestCase(from_thread_id=source_thread_id))
+    resp.raise_for_status()
+    
+    thread_name = resp.json()["thread"]["name"]
+    assert not thread_name.startswith("Test Case #")
+    
+    assert_response(resp, PublicTestCase(
+        agent_id=AGENT_ID,
+        thread=Thread(
+            id=new_thread_id,
+            name=thread_name,
+            user_id=USER_ID,
+            agent_id=AGENT_ID,
+            creation=CURRENT_TIME,
+            is_test_case=True
+        ),
+        last_update=CURRENT_TIME
+    ))
+    
+    resp = await _find_test_case_messages(client, AGENT_ID, new_thread_id)
+    assert_response(resp, [
+        ThreadMessagePublic(
+            id=last_message_id + 1,
+            thread_id=new_thread_id,
+            text="This is a message",
+            origin=ThreadMessageOrigin.USER,
+            timestamp=CURRENT_TIME,
+            files=[],
+        ),
+        ThreadMessagePublic(
+            id=last_message_id + 2,
+            thread_id=new_thread_id,
+            text="This is a response",
+            origin=ThreadMessageOrigin.AGENT,
+            timestamp=CURRENT_TIME,
+            files=[],
+        )
+    ])
+
+
+@freeze_time(CURRENT_TIME)
+async def test_add_test_case_from_existing_chat_with_branch_message(client: AsyncClient, last_thread_id: int, last_message_id: int):
+    source_thread_id = THREAD_ID
+    branch_message_id = 1
+    new_thread_id = last_thread_id + 1
+    
+    resp = await _add_test_case(
+        AGENT_ID, client, 
+        CreateTestCase(from_thread_id=source_thread_id, branch_message_id=branch_message_id)
+    )
+    assert_response(resp, PublicTestCase(
+        agent_id=AGENT_ID,
+        thread=Thread(
+            id=new_thread_id,
+            name="Test Case #4",
+            user_id=USER_ID,
+            agent_id=AGENT_ID,
+            creation=CURRENT_TIME,
+            is_test_case=True
+        ),
+        last_update=CURRENT_TIME
+    ))
+    
+    resp = await _find_test_case_messages(client, AGENT_ID, new_thread_id)
+    assert_response(resp, [
+        ThreadMessagePublic(
+            id=last_message_id + 1,
+            thread_id=new_thread_id,
+            text="This is a message",
+            origin=ThreadMessageOrigin.USER,
+            timestamp=CURRENT_TIME,
+            files=[]
+        )
+    ])
+
+
+async def test_add_test_case_from_nonexistent_chat(client: AsyncClient):
+    resp = await _add_test_case(AGENT_ID, client, CreateTestCase(from_thread_id=999))
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_add_test_case_from_chat_of_different_agent(client: AsyncClient):
+    thread_from_agent_2 = OTHER_THREAD_ID
+    resp = await _add_test_case(AGENT_ID, client, CreateTestCase(from_thread_id=thread_from_agent_2))
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_add_test_case_from_chat_with_nonexistent_branch_message(client: AsyncClient):
+    resp = await _add_test_case(
+        AGENT_ID, client, 
+        CreateTestCase(from_thread_id=THREAD_ID, branch_message_id=999)
+    )
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -415,8 +516,6 @@ async def test_get_test_case_run_messages(client: AsyncClient):
             text="Which is the first natural number? Only provide the number",
             origin=ThreadMessageOrigin.USER,
             timestamp=parse_date("2025-02-21T12:15:00"),
-            minutes_saved=None,
-            stopped=False,
             files=[]
         ),
         ThreadMessagePublic(
@@ -425,8 +524,6 @@ async def test_get_test_case_run_messages(client: AsyncClient):
             text="1",
             origin=ThreadMessageOrigin.AGENT,
             timestamp=parse_date("2025-02-21T12:16:00"),
-            minutes_saved=None,
-            stopped=False,
             files=[]
         )
     ])
@@ -460,10 +557,7 @@ async def test_find_test_case_messages(client: AsyncClient):
             text="What is 2 + 2? Only provide the number",
             origin=ThreadMessageOrigin.USER,
             timestamp=parse_date("2025-02-21T12:13:00"),
-            minutes_saved=None,
-            stopped=False,
-            files=[],
-            status_updates=None
+            files=[]
         ),
         ThreadMessagePublic(
             id=24,
@@ -471,10 +565,7 @@ async def test_find_test_case_messages(client: AsyncClient):
             text="4",
             origin=ThreadMessageOrigin.AGENT,
             timestamp=parse_date("2025-02-21T12:14:00"),
-            minutes_saved=None,
-            stopped=False,
-            files=[],
-            status_updates=None
+            files=[]
         ),
         ThreadMessagePublic(
             id=25,
@@ -482,10 +573,7 @@ async def test_find_test_case_messages(client: AsyncClient):
             text="What is 3 + 3? Only provide the number",
             origin=ThreadMessageOrigin.USER,
             timestamp=parse_date("2025-02-21T12:14:00"),
-            minutes_saved=None,
-            stopped=False,
-            files=[],
-            status_updates=None
+            files=[]
         ),
         ThreadMessagePublic(
             id=26,
@@ -493,10 +581,7 @@ async def test_find_test_case_messages(client: AsyncClient):
             text="6",
             origin=ThreadMessageOrigin.AGENT,
             timestamp=parse_date("2025-02-21T12:15:00"),
-            minutes_saved=None,
-            stopped=False,
-            files=[],
-            status_updates=None
+            files=[]
         )
     ])
 
@@ -525,10 +610,7 @@ async def test_add_test_case_message(client: AsyncClient, last_message_id: int):
             text="Which is the first natural number? Only provide the number",
             origin=ThreadMessageOrigin.USER,
             timestamp=parse_date("2025-02-21T12:10:00"),
-            minutes_saved=None,
-            stopped=False,
-            files=[],
-            status_updates=None
+            files=[]
         ),
         ThreadMessagePublic(
             id=12,
@@ -536,10 +618,7 @@ async def test_add_test_case_message(client: AsyncClient, last_message_id: int):
             text="1",
             origin=ThreadMessageOrigin.AGENT,
             timestamp=parse_date("2025-02-21T12:11:00"),
-            minutes_saved=None,
-            stopped=False,
-            files=[],
-            status_updates=None
+            files=[]
         ),
         ThreadMessagePublic(
             id=last_message_id + 1,
@@ -547,10 +626,7 @@ async def test_add_test_case_message(client: AsyncClient, last_message_id: int):
             text=message_data.text,
             origin=message_data.origin,
             timestamp=CURRENT_TIME,
-            minutes_saved=None,
-            stopped=False,
-            files=[],
-            status_updates=None
+            files=[]
         )
     ]
     resp = await _add_test_case_message(client, AGENT_ID, TEST_CASE_1_THREAD_ID, message_data)
@@ -582,10 +658,7 @@ async def test_update_test_case_message(client: AsyncClient):
         text="Updated test message",
         origin=ThreadMessageOrigin.USER,
         timestamp=parse_date("2025-02-21T12:10:00"),
-        minutes_saved=None,
-        stopped=False,
-        files=[],
-        status_updates=None
+        files=[]
     ))
 
 

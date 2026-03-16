@@ -77,11 +77,11 @@ const saveStarter = async (p: AgentPrompt) => {
     </SimpleButton>
   </div>
   <div class="flex flex-col gap-2 mb-2">
-    <div v-if="starters.length === 0" class="text-sm text-light-gray">
+    <div v-if="starters.length === 0" class="text-sm text-content-muted">
       {{ t('noStarters') }}
     </div>
     <div v-else class="flex flex-col gap-2">
-      <div v-for="starter in starters" :key="starter.id" class="rounded-xl border-1 border-auxiliar-gray overflow-hidden">
+      <div v-for="starter in starters" :key="starter.id" class="rounded-xl border-1 overflow-hidden">
             <ItemConfirmation
               v-if="deletingStarterId === starter.id"
               class="border-none shadow-none !py-0"
@@ -90,13 +90,13 @@ const saveStarter = async (p: AgentPrompt) => {
               @cancel="cancelDelete"
             />
           <div class="flex justify-between items-center py-3 px-4" v-else>
-            <span class="flex-1 border-r pr-2 border-auxiliar-gray">{{ starter.name }}</span>
+            <span class="flex-1 border-r pr-2">{{ starter.name }}</span>
             <div class="flex justify-center items-center pl-2 gap-2">
               <div class="flex justify-center items-center">
-                <InteractiveIcon @click="editStarter(starter)" v-tooltip.bottom="t('editStarter')" :icon="IconEditCircle"/>
+                <SimpleIcon interactive @click="editStarter(starter)" v-tooltip.bottom="t('editStarter')" :icon="IconEditCircle"/>
               </div>
               <div class="flex justify-center items-center">
-                <InteractiveIcon @click="confirmDelete(starter)" v-tooltip.bottom="t('deleteStarter')" :icon="IconTrash" class="hover:text-error-alt"/>
+                <SimpleIcon interactive @click="confirmDelete(starter)" v-tooltip.bottom="t('deleteStarter')" :icon="IconTrash" class="hover:text-error-alt"/>
               </div>
             </div>
           </div>

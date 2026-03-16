@@ -131,7 +131,7 @@ watch(() => props.showModal, async () => {
         @hide="handleHideAddUsersModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
         :close-on-escape="false" :dismissable-mask="false" class="w-150">
         <template #header>
-            <div class="flex justify-between items-center w-full border-b border-auxiliar-gray pb-4">
+            <div class="flex justify-between items-center w-full border-b pb-4">
                 <h3>{{ t('addUser') }}</h3>
                 <div class="flex gap-4">
                     <SimpleButton @click="handleHideAddUsersModal"><IconX /></SimpleButton>
@@ -167,7 +167,7 @@ watch(() => props.showModal, async () => {
     <Dialog v-model:visible="showSuccess" :header="t('successTitle')" :modal="true" :closable="false" :draggable="false" :resizable="false"
         :close-on-escape="true" :dismissable-mask="false" class="w-150">
         <template #header>
-            <div class="flex items-center gap-2 w-full border-b border-auxiliar-gray pb-4">
+            <div class="flex items-center gap-2 w-full border-b pb-4">
                 <IconSquareCheckFilled class="text-success"/>
                 <h3>{{ t('successTitle') }}</h3>
             </div>
@@ -182,7 +182,7 @@ watch(() => props.showModal, async () => {
     <Dialog v-model:visible="showConfirmExternalUsers" :header="t('externalUsersTitle')" :modal="true" :closable="false" :draggable="false" :resizable="false"
         :close-on-escape="true" :dismissable-mask="false" class="w-150">
         <template #header>
-            <div class="flex items-center gap-2 w-full border-b border-auxiliar-gray pb-4">
+            <div class="flex items-center gap-2 w-full border-b pb-4">
                 <IconAlertTriangleFilled color="var(--color-warn)"/>
                 <h3>{{ t('externalUsersTitle') }}</h3>
             </div>

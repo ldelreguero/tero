@@ -93,11 +93,11 @@ async def test_impact_top_agents(teams: List[Team], users: List[UserListItem], a
     from_date = (to_date - timedelta(days=30))
     resp = await _get_impact_top_agents(from_date, to_date, 1, 10, client)
     assert_response(resp, [
-        AgentImpactItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, minutes_saved=145, active_users=3, icon_bg_color=None, icon_bytes=None, team=None, previous_minutes_saved=0, previous_active_users=0, author_name=None),
-        AgentImpactItem(agent_id=external_agents[1].id, agent_name=external_agents[1].name, minutes_saved=120, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
-        AgentImpactItem(agent_id=external_agents[0].id, agent_name=external_agents[0].name, minutes_saved=60, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
-        AgentImpactItem(agent_id=agents[1].id, agent_name=agents[1].name, minutes_saved=35, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=users[0].name),
-        AgentImpactItem(agent_id=external_agents[2].id, agent_name=external_agents[2].name, minutes_saved=0, active_users=0, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, minutes_saved=145, active_users=3, icon_bytes=None, team=None, previous_minutes_saved=0, previous_active_users=0, author_name=None),
+        AgentImpactItem(agent_id=external_agents[1].id, agent_name=external_agents[1].name, minutes_saved=120, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=external_agents[0].id, agent_name=external_agents[0].name, minutes_saved=60, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=agents[1].id, agent_name=agents[1].name, minutes_saved=35, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=users[0].name),
+        AgentImpactItem(agent_id=external_agents[2].id, agent_name=external_agents[2].name, minutes_saved=0, active_users=0, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=None, is_external_agent=True),
     ])
 
 
@@ -114,12 +114,12 @@ async def test_impact_top_agents_team(teams: List[Team], users: List[UserListIte
     from_date = (to_date - timedelta(days=30))
     resp = await _get_impact_top_agents(from_date, to_date, 2, 10, client)
     assert_response(resp, [
-        AgentImpactItem(agent_id=external_agents[1].id, agent_name=external_agents[1].name, minutes_saved=120, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
-        AgentImpactItem(agent_id=agents[3].id, agent_name=agents[3].name, minutes_saved=60, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[1], previous_minutes_saved=0, previous_active_users=0, author_name=users[1].name),
-        AgentImpactItem(agent_id=external_agents[0].id, agent_name=external_agents[0].name, minutes_saved=60, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
-        AgentImpactItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, minutes_saved=35, active_users=1, icon_bg_color=None, icon_bytes=None, team=None, previous_minutes_saved=0, previous_active_users=0, author_name=None),
-        AgentImpactItem(agent_id=agents[1].id, agent_name=agents[1].name, minutes_saved=35, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=users[0].name),
-        AgentImpactItem(agent_id=external_agents[2].id, agent_name=external_agents[2].name, minutes_saved=0, active_users=0, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=external_agents[1].id, agent_name=external_agents[1].name, minutes_saved=120, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=agents[3].id, agent_name=agents[3].name, minutes_saved=60, active_users=1, icon_bytes=None, team=teams[1], previous_minutes_saved=0, previous_active_users=0, author_name=users[1].name),
+        AgentImpactItem(agent_id=external_agents[0].id, agent_name=external_agents[0].name, minutes_saved=60, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, minutes_saved=35, active_users=1, icon_bytes=None, team=None, previous_minutes_saved=0, previous_active_users=0, author_name=None),
+        AgentImpactItem(agent_id=agents[1].id, agent_name=agents[1].name, minutes_saved=35, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=users[0].name),
+        AgentImpactItem(agent_id=external_agents[2].id, agent_name=external_agents[2].name, minutes_saved=0, active_users=0, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=None, is_external_agent=True),
     ])
 
 
@@ -129,11 +129,11 @@ async def test_impact_top_agents_me(teams: List[Team], users: List[UserListItem]
     from_date = (to_date - timedelta(days=30))
     resp = await _get_impact_top_agents(from_date, to_date, MY_TEAM_ID, 10, client)
     assert_response(resp, [
-        AgentImpactItem(agent_id=external_agents[1].id, agent_name=external_agents[1].name, minutes_saved=120, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
-        AgentImpactItem(agent_id=external_agents[0].id, agent_name=external_agents[0].name, minutes_saved=60, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
-        AgentImpactItem(agent_id=agents[0].id, agent_name=agents[0].name, minutes_saved=35, active_users=1, icon_bg_color=None, icon_bytes=None, team=None, previous_minutes_saved=0, previous_active_users=0, author_name=users[0].name),
-        AgentImpactItem(agent_id=agents[1].id, agent_name=agents[1].name, minutes_saved=35, active_users=1, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=users[0].name),
-        AgentImpactItem(agent_id=external_agents[2].id, agent_name=external_agents[2].name, minutes_saved=0, active_users=0, icon_bg_color=None, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=external_agents[1].id, agent_name=external_agents[1].name, minutes_saved=120, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=external_agents[0].id, agent_name=external_agents[0].name, minutes_saved=60, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=None, is_external_agent=True),
+        AgentImpactItem(agent_id=agents[0].id, agent_name=agents[0].name, minutes_saved=35, active_users=1, icon_bytes=None, team=None, previous_minutes_saved=0, previous_active_users=0, author_name=users[0].name),
+        AgentImpactItem(agent_id=agents[1].id, agent_name=agents[1].name, minutes_saved=35, active_users=1, icon_bytes=None, team=teams[0], previous_minutes_saved=0, previous_active_users=0, author_name=users[0].name),
+        AgentImpactItem(agent_id=external_agents[2].id, agent_name=external_agents[2].name, minutes_saved=0, active_users=0, icon_bytes=None, team=teams[0], previous_minutes_saved=60, previous_active_users=1, author_name=None, is_external_agent=True),
     ])
 
 
@@ -291,8 +291,8 @@ async def test_usage_top_agents(teams: List[Team], users: List[UserListItem], ag
     resp = await _get_usage_top_agents(from_date, to_date, 1, 10, client)
     
     assert_response(resp, [
-        AgentUsageItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, icon_bg_color=None, icon_bytes=None, team=None, author_name=None, active_users=3, total_threads=3, previous_active_users=0, previous_total_threads=0),
-        AgentUsageItem(agent_id=agents[1].id, agent_name=agents[1].name, icon_bg_color=None, icon_bytes=None, team=teams[0], author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=1, previous_total_threads=1)
+        AgentUsageItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, icon_bytes=None, team=None, author_name=None, active_users=3, total_threads=3, previous_active_users=0, previous_total_threads=0),
+        AgentUsageItem(agent_id=agents[1].id, agent_name=agents[1].name, icon_bytes=None, team=teams[0], author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=1, previous_total_threads=1)
     ])
 
 
@@ -303,9 +303,9 @@ async def test_usage_top_agents_team(teams: List[Team], users: List[UserListItem
     resp = await _get_usage_top_agents(from_date, to_date, 2, 10, client)
     
     assert_response(resp, [
-        AgentUsageItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, icon_bg_color=None, icon_bytes=None, team=None, author_name=None, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
-        AgentUsageItem(agent_id=agents[1].id, agent_name=agents[1].name, icon_bg_color=None, icon_bytes=None, team=teams[0], author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=1, previous_total_threads=1),
-        AgentUsageItem(agent_id=agents[3].id, agent_name=agents[3].name, icon_bg_color=None, icon_bytes=None, team=teams[1], author_name=users[1].name, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
+        AgentUsageItem(agent_id=PRIVATE_AGENT_ID, agent_name=None, icon_bytes=None, team=None, author_name=None, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
+        AgentUsageItem(agent_id=agents[1].id, agent_name=agents[1].name, icon_bytes=None, team=teams[0], author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=1, previous_total_threads=1),
+        AgentUsageItem(agent_id=agents[3].id, agent_name=agents[3].name, icon_bytes=None, team=teams[1], author_name=users[1].name, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
     ])
 
 
@@ -316,8 +316,8 @@ async def test_usage_top_agents_me(teams: List[Team], users: List[UserListItem],
     resp = await _get_usage_top_agents(from_date, to_date, MY_TEAM_ID, 10, client)
     
     assert_response(resp, [
-        AgentUsageItem(agent_id=agents[0].id, agent_name=agents[0].name, icon_bg_color=None, icon_bytes=None, team=None, author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
-        AgentUsageItem(agent_id=agents[1].id, agent_name=agents[1].name, icon_bg_color=None, icon_bytes=None, team=teams[0], author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
+        AgentUsageItem(agent_id=agents[0].id, agent_name=agents[0].name, icon_bytes=None, team=None, author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
+        AgentUsageItem(agent_id=agents[1].id, agent_name=agents[1].name, icon_bytes=None, team=teams[0], author_name=users[0].name, active_users=1, total_threads=1, previous_active_users=0, previous_total_threads=0),
     ])
 
 

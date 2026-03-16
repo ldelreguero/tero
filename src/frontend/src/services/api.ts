@@ -45,7 +45,6 @@ export const MY_TEAM_ID = 0;
 export const PRIVATE_TEAM_ID = -1;
 export const PRIVATE_AGENT_ID = -1;
 const PRIVATE_AGENT_ICON_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAA+NJREFUaEPtmU2IV2UUxn9PaRFoGBkVmKZ9GFFEpQRWRh+LkDYhCUVBklGR9iW5KVoMtXGIMfowWohQaKjUrlWEWS2KgsQ2ZaGDRSGlWBJl2uk+cAYGnZn/e+feYf4T/wPDfxbvfd/z3POec57zXDHFTVPcf3oAJjuCvQj8LyMQEacB04HTE+Bx4Likf9sG3OoViogzgDnAZcBiYAEQwLfAXuAbYFDSsbaAtAYgIs4F7gZWpPOzTnLyL+AL4G3gfUm/tQGiFQARcU51ZV4C7gFmA/8A+4Ef0slLgIvzWv0KbK/WPCfpcFMQbQHoB9YAZ6bTbwAfA4fSwfOApcBDwBXA38Crkp6ddAARcRuwrXLIV+h74DFg1/B7HhF+UU5qg9gIXFoB9hVaIemjJiAaRSCrzbvAcuBP4BFJW8ZyKCJWARsAJ/xbVZSeaFKdmgKYD+wArgO+Bm6XNHRtRsQREWcBnwHXAl868SX9ON4oNAWwBNgELPRblfR0iSMRMQA8lVfuYUk7S54baU1TAMuA17PCrJPkZO5oEeHkXZ+V6nFJH3R8aJQFPQC9CEDvCtXOn4hwx51XcRsn8TrgQnfW5Dkl+z2QnfvnTGYnsUmeO3Qtq53EEXF1VT0eBPxrEP4zoAPAL4WnXwBclJRi0M5XzXBPVc02S/JvsdUCEBFXVTV/K3B5dtLigwoWmmJ/V1HveyWZdhdZXQAmaOYzHlB2Z0etHfaTPHP03Mk9P/h/86hbiryHclUiIhYBHwIzgPeS9zSmw3Y06fg7wJ3AH8AdkkwzOlpxBCLC995d18+slWRW2ZpFhFnsyznBubRuLtl8PAC8b/EBJU5kFIZeUK39JwxARHg29iTmQX63pN/HAjMswpMPICJuqBL9+WSpdsilcb2kz0cD0TUAIsJJbrq8cpisciLn4GckuXmdYt0E4JpqsH+tqlg3pYxiZ90/PgVWS3L57WoAVyaAW4F96aknN5dgJ7+bVVcDsB7kgcUqxcz01LXdw06/JOtD3QsgS6L50V3Azdk3PC9vkWTOM6J1TQ4MeZcyo0Uul+ojko5OmTI6lqOTGYH7gTezNLrGDzTRc4YDSX3JKsWL2fgelWRu1NHqdGKraZ9Uytr5qeesBX7KAzseNMYCS/FzgT7gRuCgc0eSVb6OVgwgk9OK2pMp3rpEWsA1tW5i03K+MAiDeUWSo1FkdQF4dHyhGjzuA84uOqF8kbmSZcm+0br1SFvVApBRsIh7fQ42JmxtmKXFXcBXdb8b1AaQIPycxdmhT0hNQZgrHZPkrzm1bFwAap0wwYt7ACb4BXfcvheBjq9oghdM+Qj8B4wJmEDEKTttAAAAAElFTkSuQmCC';
-const PRIVATE_AGENT_ICON_BG = '1F1F1F';
 
 export enum LlmModelType {
   CHAT = 'CHAT',
@@ -192,7 +191,6 @@ export class Agent {
   name?: string
   description?: string
   icon?: string
-  iconBgColor?: string
   systemPrompt?: string
   modelId?: string
   temperature?: LlmTemperature
@@ -204,12 +202,11 @@ export class Agent {
   team?: Team
   fileProcessor?: FileProcessor
 
-  constructor(id: number, name?: string, description?: string, icon?: string, iconBgColor?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, activeUsers?: number, lastUpdate?: Date, user?: User, canEdit?: boolean, team?: Team, fileProcessor?: FileProcessor) {
+  constructor(id: number, name?: string, description?: string, icon?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, activeUsers?: number, lastUpdate?: Date, user?: User, canEdit?: boolean, team?: Team, fileProcessor?: FileProcessor) {
     this.id = id
     this.name = name
     this.description = description
     this.icon = icon
-    this.iconBgColor = iconBgColor
     this.systemPrompt = systemPrompt
     this.modelId = modelId
     this.temperature = temperature
@@ -226,8 +223,8 @@ export class AgentUpdate extends Agent {
   publishPrompts?: boolean
   teamId?: number | null
 
-  constructor(id: number, name?: string, description?: string, icon?: string, iconBgColor?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, activeUsers?: number, lastUpdate?: Date, shared?: boolean, user?: User, canEdit?: boolean, publishPrompts?: boolean, teamId?: number, fileProcessor?: FileProcessor) {
-    super(id, name, description, icon, iconBgColor, systemPrompt, modelId, temperature, activeUsers, lastUpdate, user, canEdit, undefined, fileProcessor)
+  constructor(id: number, name?: string, description?: string, icon?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, activeUsers?: number, lastUpdate?: Date, shared?: boolean, user?: User, canEdit?: boolean, publishPrompts?: boolean, teamId?: number, fileProcessor?: FileProcessor) {
+    super(id, name, description, icon, systemPrompt, modelId, temperature, activeUsers, lastUpdate, user, canEdit, undefined, fileProcessor)
     this.publishPrompts = publishPrompts
     this.teamId = teamId
   }
@@ -366,17 +363,15 @@ export class AgentItem {
   agentName: string
   team: Team | null
   icon?: string
-  iconBgColor?: string
   authorName?: string
   activeUsers: number
   previousActiveUsers: number
 
-  constructor(agentId: number, agentName: string, icon: string, iconBgColor: string, team: Team | null, authorName: string, activeUsers: number, previousActiveUsers: number) {
+  constructor(agentId: number, agentName: string, icon: string, team: Team | null, authorName: string, activeUsers: number, previousActiveUsers: number) {
     this.agentId = agentId
     this.agentName = agentName
     this.team = team
     this.icon = icon
-    this.iconBgColor = iconBgColor
     this.authorName = authorName
     this.activeUsers = activeUsers
     this.previousActiveUsers = previousActiveUsers
@@ -402,8 +397,8 @@ export class AgentImpactItem extends AgentItem {
   previousMinutesSaved: number
   isExternalAgent?: boolean
 
-  constructor(agentId: number, agentName: string, team: Team | null, activeUsers: number, minutesSaved: number, previousActiveUsers: number = 0, previousMinutesSaved: number = 0, icon: string, iconBgColor: string, authorName: string, isExternalAgent?: boolean) {
-    super(agentId, agentName, icon, iconBgColor, team, authorName, activeUsers, previousActiveUsers)
+  constructor(agentId: number, agentName: string, team: Team | null, activeUsers: number, minutesSaved: number, previousActiveUsers: number = 0, previousMinutesSaved: number = 0, icon: string, authorName: string, isExternalAgent?: boolean) {
+    super(agentId, agentName, icon, team, authorName, activeUsers, previousActiveUsers)
     this.minutesSaved = minutesSaved
     this.previousMinutesSaved = previousMinutesSaved
     this.isExternalAgent = isExternalAgent
@@ -444,8 +439,8 @@ export class AgentUsageItem extends AgentItem {
   totalThreads: number
   previousTotalThreads: number
 
-  constructor(agentId: number, agentName: string, team: Team | null, totalThreads: number, previousTotalThreads: number, icon: string, iconBgColor: string, authorName: string, activeUsers: number, previousActiveUsers: number) {
-    super(agentId, agentName, icon, iconBgColor, team, authorName, activeUsers, previousActiveUsers)
+  constructor(agentId: number, agentName: string, team: Team | null, totalThreads: number, previousTotalThreads: number, icon: string, authorName: string, activeUsers: number, previousActiveUsers: number) {
+    super(agentId, agentName, icon, team, authorName, activeUsers, previousActiveUsers)
     this.totalThreads = totalThreads
     this.previousTotalThreads = previousTotalThreads
   }
@@ -863,8 +858,15 @@ export class ApiService {
     return await this.fetchJson(`/agents/${agentId}/tests/${testCaseId}`)
   }
 
-  async addTestCase(agentId: number): Promise<TestCase> {
-    return await this.post(`/agents/${agentId}/tests`)
+  async addTestCase(agentId: number, fromThreadId?: number, branchMessageId?: number): Promise<TestCase> {
+    const requestBody: { fromThreadId?: number; branchMessageId?: number } = {}
+    if (fromThreadId !== undefined) {
+      requestBody.fromThreadId = fromThreadId
+    }
+    if (branchMessageId !== undefined) {
+      requestBody.branchMessageId = branchMessageId
+    }
+    return await this.post(`/agents/${agentId}/tests`, Object.keys(requestBody).length > 0 ? requestBody : undefined)
   }
 
   async updateTestCase(agentId: number, testCaseId: number, name: string): Promise<TestCase> {
@@ -897,6 +899,10 @@ export class ApiService {
 
   async updateTestCaseMessage(agentId: number, testCaseId: number, messageId: number, message: TestCaseThreadMessageUpdate): Promise<ThreadMessage> {
     return await this.fetchJson(`/agents/${agentId}/tests/${testCaseId}/messages/${messageId}`, 'PUT', message)
+  }
+
+  async deleteTestCaseMessageAndFollowing(agentId: number, testCaseId: number, messageId: number): Promise<void> {
+    await this.delete(`/agents/${agentId}/tests/${testCaseId}/messages/${messageId}`)
   }
 
   async runTestSuite(agentId: number, testCaseIds?: number[]): Promise<TestSuiteRun> {
@@ -1001,7 +1007,6 @@ export class ApiService {
       if (agent.agentId === PRIVATE_AGENT_ID) {
         agent.agentName = privateAgentsName
         agent.icon = PRIVATE_AGENT_ICON_BASE64
-        agent.iconBgColor = PRIVATE_AGENT_ICON_BG
         agent.team = {
           id: PRIVATE_TEAM_ID,
           name: privateAgentsName
@@ -1029,7 +1034,6 @@ export class ApiService {
       if (agent.agentId === PRIVATE_AGENT_ID) {
         agent.agentName = privateAgentsName
         agent.icon = PRIVATE_AGENT_ICON_BASE64
-        agent.iconBgColor = PRIVATE_AGENT_ICON_BG
         agent.team = {
           id: PRIVATE_TEAM_ID,
           name: privateAgentsName
@@ -1149,12 +1153,16 @@ export class ApiService {
     return data.transcription
   }
 
-  async completeToolAuth(toolId: string, state: string, code: string): Promise<void> {
-    await this.put(`/tools/${toolId}/oauth/${state}`, { code })
+  async completeToolOauthAuth(toolId: string, agentId: number, state: string, code: string): Promise<void> {
+    await this.put(`/tools/${toolId}/agents/${agentId}/auth`, { state: state, code: code })
   }
 
   async deleteToolAuth(toolId: string, state: string): Promise<void> {
     await this.delete(`/tools/${toolId}/oauth/${state}`)
+  }
+
+  async completeToolAuthTokenAuth(toolId: string, agentId: number, authToken: string): Promise<void> {
+    await this.put(`/tools/${toolId}/agents/${agentId}/auth`, { auth_token: authToken })
   }
 
   async findBudgetUsage(): Promise<BudgetUsage> {

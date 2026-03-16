@@ -19,6 +19,7 @@ const props = defineProps<{
   testCases?: TestCase[]
   isComparingResultWithTestSpec?: boolean
   testSpecMessages?: AgentTestcaseChatUiMessage[]
+  initialTab?: string
 }>()
 
 const emit = defineEmits<{
@@ -62,7 +63,7 @@ const isLoading = ref(true)
 const teams = ref<Team[]>([])
 const defaultTeams = ref<Team[]>([new Team(0, t('private'))])
 const selectedTeam = ref<number | null>(null)
-const activeTab = ref<string>('0')
+const activeTab = ref<string>(props.initialTab ?? '0')
 const showImportAgent = ref(false)
 const showPastExecutions = ref(false)
 const showGenerateDialog = ref(false)
@@ -352,7 +353,7 @@ const onGenerate = async () => {
               </Tab>
               <Tab value="1">
                 <div class="flex gap-2">
-                  <IconPlayerPlay size="20" />
+                  <IconTestPipe size="20" />
                   {{ t('testsTabTitle') }}
                 </div>
               </Tab>
@@ -394,7 +395,7 @@ const onGenerate = async () => {
           <div class="flex flex-col gap-3 px-4 py-2 mb-4" v-if="agent && !isLoading">
             <div class="flex flex-row justify-between">
               <div class="form-field">
-                <AgentIconEditor v-model:icon="agent.icon" v-model:bg-color="agent.iconBgColor" @change="updateAgent" />
+                <AgentIconEditor v-model:icon="agent.icon" @change="updateAgent" />
               </div>
               <div class="form-field !flex-row gap-3 items-center">
                 <label for="visibility">{{ t('visibilityLabel') }}</label>
@@ -462,12 +463,12 @@ const onGenerate = async () => {
         {{ t(shareDialogTranslationKey, shareDialogTranslationParams) }}
       </div>
       <div v-if="!invalidAttrs && isSelectedPublicTeam && privatePromptsCount > 0"
-        class="flex items-center gap-2 py-4 mt-3 border-t-1 border-auxiliar-gray">
+        class="flex items-center gap-2 py-4 mt-3 border-t-1">
         <div class="flex flex-row gap-2 items-start">
           <ToggleSwitch v-model="publishPrompts" />
           <div class="flex flex-col">
             <label for="publish-prompts"> {{ t('publishPrompts', { count: privatePromptsCount }) }} </label>
-            <label class="text-sm text-light-gray">{{ t('publishPromptsDescription') }}</label>
+            <label class="text-sm text-content-muted">{{ t('publishPromptsDescription') }}</label>
           </div>
         </div>
       </div>

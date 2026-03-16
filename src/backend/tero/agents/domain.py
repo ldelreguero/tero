@@ -24,7 +24,6 @@ class BaseAgent(CamelCaseModel, abc.ABC):
     id: int = Field(primary_key=True, default=None)
     name: Optional[str] = Field(max_length=NAME_MAX_LENGTH, default=None)   
     description: Optional[str] = Field(max_length=100, default=None)
-    icon_bg_color: Optional[str] = Field(max_length=6, default=None)
     last_update: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     def set_default_name(self):
@@ -35,7 +34,6 @@ class AgentUpdate(CamelCaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     icon: Optional[str] = None
-    icon_bg_color: Optional[str] = None
     model_id: Optional[str] = None
     system_prompt: Optional[str] = None
     temperature: Optional[LlmTemperature] = None

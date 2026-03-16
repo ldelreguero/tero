@@ -20,6 +20,16 @@ class User(BaseUser, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
     team_roles: List[TeamRole] = Relationship()
 
+    def is_active(self) -> bool:
+        if self.deleted_at is None:
+            return True
+        deleted_at = self.deleted_at
+        # Records inserted directly into the database may lack timezone info, 
+        # for that reason we set it to the current timezone if it's not set
+        if deleted_at.tzinfo is None:
+            deleted_at = deleted_at.replace(tzinfo=timezone.utc)
+        return deleted_at > datetime.now(timezone.utc)
+
     def is_member_of(self, team_id: int) -> bool:
         return team_id == GLOBAL_TEAM_ID or any(cast(Team, tr.team).id == team_id and tr.status == TeamRoleStatus.ACCEPTED for tr in self.team_roles)
 

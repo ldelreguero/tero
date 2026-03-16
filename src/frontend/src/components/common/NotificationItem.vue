@@ -27,7 +27,7 @@ const collapsed = ref<boolean>(true);
             </div>
         </template>
         <template #toggleicon>
-            <InteractiveIcon :icon="collapsed ? IconChevronDown : IconChevronUp" />
+            <SimpleIcon interactive :icon="collapsed ? IconChevronDown : IconChevronUp" />
         </template>
         <div class="flex flex-col gap-4">
             <div class="flex flex-col">

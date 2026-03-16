@@ -3,7 +3,7 @@ export const fetchJson = async (url: string, options?: RequestInit) => {
   return await ret.status === 204 ? null : ret.json()
 }
 
-const fetchResponse = async (url: string, options?: RequestInit) => {
+export const fetchResponse = async (url: string, options?: RequestInit) => {
   let ret = await fetch(url, options)
 
   if (ret.status < 200 || ret.status >= 300) {
@@ -36,14 +36,15 @@ export class HttpServiceError extends Error {
 
 export async function* fetchStreamJson(url: string, options?: RequestInit): AsyncIterable<any> {
   let resp = await fetchResponse(url, options)
+  yield* streamFromResponse(resp, url, options)
+}
+
+export async function* streamFromResponse(resp: Response, url: string, options?: RequestInit): AsyncIterable<any> {
   let contentType = resp.headers.get("content-type")
   if (contentType?.startsWith("text/event-stream")) {
-    let ret = await fetchSSEStream(resp, url, options)
-    for await (const part of ret) {
-      yield part
-    }
+    yield* fetchSSEStream(resp, url, options)
   } else {
-    yield resp.json()
+    yield* await resp.json()
   }
 }
 

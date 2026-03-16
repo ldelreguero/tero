@@ -5,7 +5,7 @@ import type { JSONSchema7, JSONSchema7Definition } from 'json-schema'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import Ajv, { type ErrorObject } from 'ajv'
 import addFormats from 'ajv-formats'
-import { AuthenticationError, handleOAuthRequestsIn } from '@/services/toolOAuth';
+import { AuthenticationError, handleOAuthRequestsIn } from '@/services/toolAuth';
 import { AgentToolConfig, AgentTool } from '@/services/api'
 
 export class EditingToolConfig {
@@ -28,7 +28,7 @@ export class EditingToolConfig {
 </script>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IconX } from '@tabler/icons-vue'
 import { ApiService, findManifest, HttpError } from '@/services/api'
@@ -58,9 +58,7 @@ onMounted(async () => {
     const manifest = await findManifest()
     contactEmail.value = manifest.contactEmail
     savedConfig.value = props.toolConfig.config
-    if (!savedConfig.value) {
-      initializeToolConfig()
-    }
+    initializeToolConfig()
   } catch (error) {
     handleError(error)
   }
@@ -70,6 +68,12 @@ const initializeToolConfig = () => {
   Object.entries(toolProperties.value).forEach(([propName, propSchema]) => {
     if (isBooleanProperty(propSchema) && mutableConfig[propName] === undefined) {
       mutableConfig[propName] = false
+    }
+    if (isStringEnumProperty(propSchema) && mutableConfig[propName] === undefined) {
+      const defaultEnumValue = js7(propSchema)!.default
+      if (defaultEnumValue) {
+        mutableConfig[propName] = defaultEnumValue
+      }
     }
   })
 }
@@ -83,9 +87,35 @@ const isBooleanProperty = (toolProp: JSONSchema7Definition) : boolean => {
   return toolPropSchema.type === 'boolean'
 }
 
-const js7 = (val: unknown): JSONSchema7 | undefined => {
+function js7(val: unknown): JSONSchema7 | undefined {
   return val as JSONSchema7
 }
+
+const areDependenciesMet = (toolProp: JSONSchema7Definition) : boolean => {
+  const toolPropSchema = js7(toolProp)!
+  if (toolPropSchema.dependencies === undefined) {
+    return true
+  }
+  return Object.entries(toolPropSchema.dependencies).every(([dependencyKey, dependencyValue]) => {
+    const dependencyPropValue = mutableConfig[dependencyKey]
+    if (dependencyPropValue === undefined) {
+      return false
+    }
+    const dependencySchema = js7(dependencyValue)
+    if (dependencySchema?.const !== undefined) {
+      return dependencyPropValue === dependencySchema.const
+    }
+    return true
+  })
+}
+
+watchEffect(() => {
+  Object.entries(toolProperties.value).forEach(([propName, propSchema]) => {
+    if (!areDependenciesMet(propSchema) && mutableConfig[propName] !== undefined) {
+      delete (mutableConfig as Record<string, unknown>)[propName]
+    }
+  })
+})
 
 const translateToolPropertyName = (toolId: string, propName: string): string => {
   return t(buildToolPropertyTranslationKey(toolId, propName))
@@ -125,9 +155,14 @@ const isFileProperty = (toolProp: JSONSchema7Definition) : boolean => {
   return js7(toolProp)?.$ref?.endsWith('/File') ?? false
 }
 
-const isEnumProperty = (toolProp: JSONSchema7Definition) : boolean => {
+const isArrayEnumProperty = (toolProp: JSONSchema7Definition) : boolean => {
   const toolPropSchema = js7(toolProp)!
   return toolPropSchema.type === 'array' && js7(toolPropSchema.items)?.enum !== undefined
+}
+
+const isStringEnumProperty = (toolProp: JSONSchema7Definition) : boolean => {
+  const toolPropSchema = js7(toolProp)!
+  return toolPropSchema.type === 'string' && toolPropSchema.enum !== undefined
 }
 
 const isSecretStringProperty = (toolProp: JSONSchema7Definition) : boolean => {
@@ -176,7 +211,7 @@ const onClose = () => {
 
 const saveToolConfig = async () => {
   saving.value = true
-  validationErrors.value = null
+  clearValidationErrors()
   try {
     validateToolConfig()
     let ret = new AgentToolConfig(props.toolConfig.toolId, mutableConfig)
@@ -198,6 +233,7 @@ const saveToolConfig = async () => {
     }
     emit('update', ret)
   } catch (error) {
+    console.error("Error saving tool config", error)
     if (error instanceof AuthenticationError) {
       validationErrors.value = t(error.errorCode)
     } else if (error instanceof ValidationErrors) {
@@ -248,6 +284,10 @@ const findValidationErrorMessage = (error: ErrorObject, toolId: string) : string
   }
 }
 
+const clearValidationErrors = () => {
+  validationErrors.value = null
+}
+
 class ValidationErrors extends Error {
   constructor(message: string) {
     super(message)
@@ -269,7 +309,7 @@ class ValidationErrors extends Error {
       </div>
     </template>
     <div class="flex flex-col gap-2 mb-4">
-      <div v-if="toolMessage" class="text-light-gray text-sm tool-message mb-2" v-html="toolMessage"></div>
+      <div v-if="toolMessage" class="text-content-muted text-sm tool-message mb-2" v-html="toolMessage"></div>
       <div v-for="propName in Object.keys(toolProperties)" :key="propName" class="form-field relative">
         <div v-if="isFileArrayProperty(toolProperties[propName]) || isFileProperty(toolProperties[propName])">
           <label :for="propName">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</label>
@@ -290,9 +330,9 @@ class ValidationErrors extends Error {
               v-model="mutableConfig[propName] as boolean"
               v-tooltip.bottom="solveToolPropertyTooltip(toolConfig.tool.id, propName, mutableConfig[propName])"
               :disabled="viewMode" />
-          <span :class="{ 'text-light-gray': !mutableConfig[propName] }">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</span>
+          <span :class="{ 'text-content-muted': !mutableConfig[propName] }">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</span>
         </div>
-        <div v-else-if="isEnumProperty(toolProperties[propName])">
+        <div v-else-if="isArrayEnumProperty(toolProperties[propName])">
           <AgentToolConfigEnumPropertyEditor
               v-model="mutableConfig[propName] as string[]"
               :id="propName"
@@ -301,7 +341,19 @@ class ValidationErrors extends Error {
               :option-labels="translateOptionLabel"
               :view-mode="viewMode"/>
         </div>
-        <div v-else-if="!isBooleanProperty(toolProperties[propName])" class="flex flex-col gap-1">
+        <div v-else-if="isStringEnumProperty(toolProperties[propName])" class="flex flex-col gap-1">
+          <label :for="propName">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</label>
+          <Select
+              v-model="mutableConfig[propName]"
+              :id="propName"
+              :options="(js7(toolProperties[propName])!.enum as string[]).map(val => ({ label: translateOptionLabel(propName, val), value: val }))"
+              optionLabel="label"
+              optionValue="value"
+              class="w-1/2 my-1"
+              :disabled="viewMode"
+              @change="clearValidationErrors"/>
+        </div>
+        <div v-else-if="!isBooleanProperty(toolProperties[propName]) && areDependenciesMet(toolProperties[propName])" class="flex flex-col gap-1">
           <label :for="propName">{{ translateToolPropertyName(toolConfig.tool.id, propName) }}</label>
           <InteractiveInput
               v-model="mutableConfig[propName] as string"
@@ -341,9 +393,9 @@ class ValidationErrors extends Error {
       "save": "Save",
       "cancel": "Cancel",
       "close": "Close",
-      "authenticationWindowClosed": "The authentication window was closed. Please sign in again to configure this tool.",
+      "authenticationWindowBlocked": "The authentication popup could not be opened. Please check that popups are allowed for this site and try again.",
       "authenticationCancelled": "The authentication was cancelled. Please complete the authentication process to configure this tool.",
-      "authenticationAccessDenied": "The authentication was denied by the MCP server. Please verify that you actually have the permissions necessary to use it.",
+      "authenticationAccessDenied": "The authentication was denied by the server. Please verify that you actually have the permissions necessary to use it.",
       "missingProperty": "A value is required for '{property}'. Please provide one.",
       "invalidPropertyFormat": "Provided '{property}' is not a valid {format}. Please, review the value and try again.",
       "invalidPropertyMinLength": "Provided '{property}' is shorter than {minLength} @:{'character'}. Please, review the value and try again.",
@@ -357,6 +409,10 @@ class ValidationErrors extends Error {
       "docsAdvancedFileProcessingTooltipTrue": "Advanced processing uses AI to extract the content of the file. In general it is more accurate but it consumes more budget and it may take longer to process. \n\nNote: This option will only apply to new uploaded files.",
       "mcpToolMessage": "Enable using tools provided by an MCP server for this agent.{'<'}br/>{'<'}b>Only use servers you trust.{'<'}/b>",
       "mcpServerUrl": "Server URL",
+      "mcpAuthType": "Auth Type",
+      "mcpAuthTypeOauth": "OAuth",
+      "mcpAuthTypeBearerToken": "Bearer Token",
+      "mcpBearerToken": "Bearer Token",
       "jiraToolMessage": "Allows to integrate this agent with Jira.{'<'}br/>To configure this tool you need a configured Jira OAuth app with redirect URL {'<'}u>{frontendUrl}/tools/jira/oauth-callback{'<'}/u>.{'<'}br/> Check {'<'}a href='https://developer.atlassian.com/cloud/confluence/oauth-2-3lo-apps/#enabling-oauth-2-0--3lo-' target='_blank'>this guide{'<'}/a> for more details.",
       "jiraClientId": "Client ID",
       "jiraClientSecret": "Client secret",
@@ -371,9 +427,9 @@ class ValidationErrors extends Error {
       "save": "Guardar",
       "cancel": "Cancelar",
       "close": "Cerrar",
-      "authenticationWindowClosed": "La ventana de autenticación se cerró. Por favor, inicie sesión nuevamente para configurar esta herramienta.",
+      "authenticationWindowBlocked": "No se pudo abrir la ventana de autenticación. Por favor, verifica que las ventanas emergentes estén permitidas para este sitio y vuelve a intentarlo.",
       "authenticationCancelled": "La autenticación fue cancelada. Por favor, complete el proceso de autenticación para configurar esta herramienta.",
-      "authenticationAccessDenied": "La autenticación fue denegada por el servidor MCP. Por favor, verifica que tengas los permisos necesarios para usarlo.",
+      "authenticationAccessDenied": "La autenticación fue denegada por el servidor. Por favor, verifica que tengas los permisos necesarios para usarlo.",
       "missingProperty": "Se requiere un valor para '{property}'. Por favor proporciona uno.",
       "invalidPropertyFormat": "El valor proporcionado para '{property}' no es válido. Por favor, revise el valor y vuelve a intentarlo.",
       "invalidPropertyMinLength": "El valor proporcionado para '{property}' es más corto que {minLength} @:{'character'}. Por favor, revise el valor y vuelve a intentarlo.",
@@ -387,6 +443,10 @@ class ValidationErrors extends Error {
       "docsAdvancedFileProcessingTooltipTrue": "El procesamiento avanzado utiliza IA para extraer el contenido del archivo. En general es más preciso pero consume más presupuesto y puede tardar más en procesarse.\n\nNota: Esta opción se aplicará unicamente a los nuevos archivos subidos.",
       "mcpToolMessage": "Habilita el uso de herramientas de un servidor MCP para este agente.{'<'}br/>{'<'}b>Solo usa servidores que confíes.{'<'}/b>",
       "mcpServerUrl": "URL del servidor",
+      "mcpAuthType": "Tipo de autenticación",
+      "mcpAuthTypeOauth": "OAuth",
+      "mcpAuthTypeBearerToken": "Bearer Token",
+      "mcpBearerToken": "Bearer Token",
       "jiraToolMessage": "Permite integrar este agente con Jira.{'<'}br/>Para configurar esta herramienta necesitas configurar una aplicación OAuth en Jira con URL de redirección {'<'}u>{frontendUrl}/tools/jira/oauth-callback{'<'}/u>.{'<'}br/> Revisa {'<'}a href='https://developer.atlassian.com/cloud/confluence/oauth-2-3lo-apps/#enabling-oauth-2-0--3lo-' target='_blank'>esta guía{'<'}/a> para más detalles.",
       "jiraClientId": "ID del cliente",
       "jiraClientSecret": "Secreto del cliente",

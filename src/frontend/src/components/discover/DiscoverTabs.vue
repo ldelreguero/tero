@@ -332,7 +332,7 @@ onMounted(async () => {
               <div class="grid-wrapper pb-16">
                 <div v-if="currentTabId === TabId.ALL" class="flex flex-row justify-between items-center gap-2">
                   <div class="flex flex-row items-center gap-2">
-                    <span class="text-light-gray">{{ t('sortBy') }}:</span>
+                    <span class="text-content-muted">{{ t('sortBy') }}:</span>
                     <Select
                       id="sortBy"
                       v-model="sortBy"
@@ -344,7 +344,7 @@ onMounted(async () => {
                     />
                   </div>
                   <div class="flex flex-row items-center gap-2">
-                    <span class="text-light-gray">{{ t('team') }}:</span>
+                    <span class="text-content-muted">{{ t('team') }}:</span>
                     <UserTeamsSelect v-model="team" ref="userTeamsSelectRef" :default-teams="defaultTeamOptions" :default-selected-team="team" />
                   </div>
                 </div>
@@ -360,7 +360,7 @@ onMounted(async () => {
                         :effect="AnimationEffect.SLIDE_IN_LEFT_SPRING"
                         :index="index"
                         :enabled="shouldAnimate">
-                        <h4 class="text-light-gray">{{ t(section.title) }}</h4>
+                        <h4 class="text-content-muted">{{ t(section.title) }}</h4>
                       </Animate>
                       <div class="column-gap !py-2">
                         <template v-for="(agent, agentIndex) in section.agents" :key="agentIndex">
@@ -375,14 +375,14 @@ onMounted(async () => {
                     </div>
                 </div>
                 <div v-else-if="currentTabId === TabId.SEARCH && !currentAgents.length" class="flex flex-col items-center justify-center h-64 col text-center">
-                  <div class="text-light-gray mb-4">
+                  <div class="text-content-muted mb-4">
                     <IconSearch size="48" :class="{ 'animate-magnify-search': isSearching }" />
                   </div>
-                  <h3 class="text-light-gray mb-2">{{ isSearching ? t('searchingAgents') : t('noAgentsFound') }}</h3>
-                  <p class="text-light-gray/70 max-w-md">{{ isSearching ? t('searchingAgentsDescription') : t('noAgentsFoundDescription') }}</p>
+                  <h3 class="text-content-muted mb-2">{{ isSearching ? t('searchingAgents') : t('noAgentsFound') }}</h3>
+                  <p class="text-content-muted/70 max-w-md">{{ isSearching ? t('searchingAgentsDescription') : t('noAgentsFoundDescription') }}</p>
                 </div>
                 <div v-else-if="currentTabId === TabId.OWN && !currentAgents.length && !isLoading" class="flex flex-col items-center text-center">
-                  <p class="text-light-gray pt-5">{{ t('noAgentsCreated') }}</p>
+                  <p class="text-content-muted pt-5">{{ t('noAgentsCreated') }}</p>
                 </div>
                 <div class="column-gap" v-else>
                   <DiscoverSkeleton v-if="isLoading && !loadingMoreAgents" />
