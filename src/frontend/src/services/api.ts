@@ -54,7 +54,8 @@ export enum LlmModelType {
 export enum LlmModelVendor {
   OPENAI = 'OPENAI',
   ANTHROPIC = 'ANTHROPIC',
-  GOOGLE = 'GOOGLE'
+  GOOGLE = 'GOOGLE',
+  QWEN = 'QWEN'
 }
 
 export class LlmModel {
@@ -195,6 +196,7 @@ export class Agent {
   modelId?: string
   temperature?: LlmTemperature
   reasoningEffort?: ReasoningEffort
+  recursionLimit?: number
   activeUsers?: number
   lastUpdate?: Date
   user?: User
@@ -202,7 +204,7 @@ export class Agent {
   team?: Team
   fileProcessor?: FileProcessor
 
-  constructor(id: number, name?: string, description?: string, icon?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, activeUsers?: number, lastUpdate?: Date, user?: User, canEdit?: boolean, team?: Team, fileProcessor?: FileProcessor) {
+  constructor(id: number, name?: string, description?: string, icon?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, recursionLimit?: number, activeUsers?: number, lastUpdate?: Date, user?: User, canEdit?: boolean, team?: Team, fileProcessor?: FileProcessor) {
     this.id = id
     this.name = name
     this.description = description
@@ -211,6 +213,7 @@ export class Agent {
     this.modelId = modelId
     this.temperature = temperature
     this.activeUsers = activeUsers
+    this.recursionLimit = recursionLimit
     this.lastUpdate = lastUpdate
     this.user = user
     this.canEdit = canEdit
@@ -223,8 +226,8 @@ export class AgentUpdate extends Agent {
   publishPrompts?: boolean
   teamId?: number | null
 
-  constructor(id: number, name?: string, description?: string, icon?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, activeUsers?: number, lastUpdate?: Date, shared?: boolean, user?: User, canEdit?: boolean, publishPrompts?: boolean, teamId?: number, fileProcessor?: FileProcessor) {
-    super(id, name, description, icon, systemPrompt, modelId, temperature, activeUsers, lastUpdate, user, canEdit, undefined, fileProcessor)
+  constructor(id: number, name?: string, description?: string, icon?: string, systemPrompt?: string, modelId?: string, temperature?: LlmTemperature, recursionLimit?: number, activeUsers?: number, lastUpdate?: Date, user?: User, canEdit?: boolean, publishPrompts?: boolean, teamId?: number, fileProcessor?: FileProcessor) {
+    super(id, name, description, icon, systemPrompt, modelId, temperature, recursionLimit, activeUsers, lastUpdate, user, canEdit, undefined, fileProcessor)
     this.publishPrompts = publishPrompts
     this.teamId = teamId
   }
@@ -304,7 +307,8 @@ export class Thread {
 
 export enum ThreadMessageOrigin {
   USER = 'USER',
-  AGENT = 'AGENT'
+  AGENT = 'AGENT',
+  SYSTEM = 'SYSTEM'
 }
 
 export class ThreadMessage {

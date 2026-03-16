@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Agent, TestCase } from '@/services/api'
-import { IconPencil, IconTrash, IconPlayerPlay, IconPlus, IconHistory, IconSettings, IconCopyPlus } from '@tabler/icons-vue'
+import { IconPencil, IconTrash, IconPlayerPlay, IconPlus, IconHistory, IconCopyPlus, IconClipboardCheck } from '@tabler/icons-vue'
 import { AnimationEffect } from '../../../../common/src/utils/animations'
 import AgentAvatar from './AgentAvatar.vue'
 import SimpleMenu from '../common/SimpleMenu.vue'
@@ -136,7 +136,7 @@ const onCloneTestCase = async (testCase: TestCase) => {
                     },
                     {
                         label: t('configureEvaluator'),
-                        tablerIcon: IconSettings,
+                        tablerIcon: IconClipboardCheck,
                         command: () => handleConfigureEvaluator(),
                     }
                 ]" />
@@ -179,7 +179,7 @@ const onCloneTestCase = async (testCase: TestCase) => {
                                 },
                                 {
                                     label: t('configureTestEvaluator'),
-                                    tablerIcon: IconSettings,
+                                    tablerIcon: IconClipboardCheck,
                                     command: () => handleConfigureEvaluator(testCase.thread.id),
                                 },
                                 {
@@ -217,8 +217,8 @@ const onCloneTestCase = async (testCase: TestCase) => {
         "pastExecutions": "Past Executions",
         "noTestCasesTitle": "You don't have test cases for this agent yet",
         "noTestCasesDescription": "Create your first test case to validate that the agent meets the expected requirements.",
-        "configureEvaluator": "Configure agent evaluator",
-        "configureTestEvaluator": "Configure test evaluator"
+        "configureEvaluator": "Agent evaluator",
+        "configureTestEvaluator": "Test evaluator"
     },
     "es": {
         "newTestCaseButton": "Agregar",
@@ -231,8 +231,8 @@ const onCloneTestCase = async (testCase: TestCase) => {
         "pastExecutions": "Ejecuciones pasadas",
         "noTestCasesTitle": "Aún no tienes test cases para este agente",
         "noTestCasesDescription": "Crea tu primer test case para validar que el agente cumple los requisitos esperados.",
-        "configureEvaluator": "Configurar evaluador del agente",
-        "configureTestEvaluator": "Configurar evaluador del test"
+        "configureEvaluator": "Evaluador del agente",
+        "configureTestEvaluator": "Evaluador del test"
     }
 }
 </i18n>

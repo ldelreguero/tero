@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Reque
 from fastapi.responses import StreamingResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sse_starlette.event import ServerSentEvent
+from langgraph.errors import GraphRecursionError
 
 from ..agents.repos import AgentRepository
 from ..ai_models import ai_factory
@@ -19,9 +20,10 @@ from ..core.domain import CamelCaseModel
 from ..core.env import env
 from ..core.repos import get_db
 from ..files.api import build_file_download_response
+from ..files.core import FileQuota, CurrentQuota, QuotaExceededError, add_encoding_to_content_type
 from ..files.domain import File, FileStatus, FileMetadata, FileProcessor, FileMetadataWithContent
-from ..files.file_quota import FileQuota, CurrentQuota, QuotaExceededError
-from ..files.parser import add_encoding_to_content_type, extract_file_text
+from ..files.parser import extract_file_text
+from ..files.processors.pdf import is_enhanced_pdf_processor_available
 from ..files.repos import FileRepository
 from ..tools.auth import ToolAuthRequestException, build_tool_auth_request_http_exception
 from ..usage.domain import Usage, UsageType, MessageUsage
@@ -165,7 +167,7 @@ async def add_message(thread_id: int, request: Request, user: Annotated[User, De
         user_message = await repo.add(initial_thread_message)
 
         await _attach_existing_files_to_message(existing_files, user_message, db)
-        await _handle_file_contents(files, user_message, user, thread, engine, db)
+        await _handle_file_contents(files, user_message, user, thread, db)
         user_message = await repo.refresh_with_files(user_message)
 
         return StreamingResponse(
@@ -198,23 +200,22 @@ async def _attach_existing_files_to_message(files: List[ThreadMessageFile], user
         await repo.add(ThreadMessageFile(thread_message_id=user_message.id, file_id=f.file_id))
 
 
-async def _handle_file_contents(files: List[UploadFile], user_message: ThreadMessage, user: User, thread: Thread, engine: AgentEngine, db: AsyncSession):
+async def _handle_file_contents(files: List[UploadFile], user_message: ThreadMessage, user: User, thread: Thread, db: AsyncSession):
     file_repo = FileRepository(db)
     if files:
         for f in files:
             content = await f.read()
             content_type = add_encoding_to_content_type(f.content_type, content)
-            file_processor = FileProcessor.ENHANCED if env.azure_doc_intelligence_endpoint and env.azure_doc_intelligence_key else FileProcessor.BASIC
+            file_processor = FileProcessor.ENHANCED if is_enhanced_pdf_processor_available() else FileProcessor.BASIC
             file = File(name=f.filename or "uploaded-file", content_type=content_type, content=content, user_id=user.id, file_processor=file_processor)
             pdf_parsing_usage = Usage(message_id=user_message.id, user_id=user.id, agent_id=thread.agent_id, model_id=None, type=UsageType.PDF_PARSING)
             current_usage = await UsageRepository(db).find_current_month_user_usage_usd(user.id)
-            file_quota = FileQuota(pdf_parsing_usage, engine, CurrentQuota(current_usage, user.monthly_usd_limit))
+            file_quota = FileQuota(pdf_parsing_usage, thread.agent, CurrentQuota(current_usage, user.monthly_usd_limit))
             try:
                 file.processed_content = await extract_file_text(file, file_quota)
                 file.status = FileStatus.PROCESSED
                 saved_file = await file_repo.add(file)
                 await ThreadMessageFileRepository(db).add(ThreadMessageFile(thread_message_id=user_message.id, file_id=saved_file.id))
-
             finally:
                 await UsageRepository(db).add(pdf_parsing_usage)
 
@@ -222,15 +223,18 @@ async def _handle_file_contents(files: List[UploadFile], user_message: ThreadMes
 async def _agent_response(message: ThreadMessage, thread: Thread, user_id: int, db: AsyncSession, is_in_agent_edition: bool) \
         -> AsyncIterator[bytes]:
     message_usage = None
+    repo = ThreadMessageRepository(db)
     yield ServerSentEvent(event="userMessage", data=json.dumps({
         "id": message.id,
         "files": [FileMetadata.from_file(f.file).model_dump(mode="json", by_alias=True) for f in message.files if f.file]
     })).encode()
+    complete_answer = ""
+    files: List[FileMetadata] = []
+    status_updates: List[AgentActionEvent] = []
     try:
         stop_event = asyncio.Event()
         active_streaming_connections[thread.id] = stop_event
 
-        repo = ThreadMessageRepository(db)
         message_usage = MessageUsage(user_id=user_id, agent_id=thread.agent_id, model_id=thread.agent.model_id, message_id=message.id)
         thread_messages = await repo.find_previous_messages(message)
 
@@ -239,9 +243,6 @@ async def _agent_response(message: ThreadMessage, thread: Thread, user_id: int, 
             await ThreadRepository(db).update(thread)
 
         answer_stream = AgentEngine(thread.agent, user_id, db).answer([*thread_messages, message], message_usage, stop_event)
-        complete_answer = ""
-        files: List[FileMetadata] = []
-        status_updates: List[AgentActionEvent] = []
 
         async for event in answer_stream:
             if isinstance(event, AgentActionEvent):
@@ -275,7 +276,7 @@ async def _agent_response(message: ThreadMessage, thread: Thread, user_id: int, 
             parent_id=message.id,
             minutes_saved=minutes_saved,
             stopped=stop_event.is_set(),
-            status_updates=[event.model_dump(mode="json", by_alias=True) for event in status_updates] if status_updates else None
+            status_updates=_dump_status_updates(status_updates)
         ))
         for f in files:
             await ThreadMessageFileRepository(db).add(ThreadMessageFile(thread_message_id=answer.id, file_id=f.id))
@@ -286,13 +287,33 @@ async def _agent_response(message: ThreadMessage, thread: Thread, user_id: int, 
             "minutesSaved": answer.minutes_saved,
             "stopped": answer.stopped
         })).encode()
-    except Exception:
+
+    except* GraphRecursionError:
+        await repo.add(ThreadMessage(
+            thread_id=thread.id,
+            text="ERROR_RECURSION_LIMIT_EXCEEDED",
+            origin=ThreadMessageOrigin.SYSTEM,
+            parent_id=message.id,
+            status_updates=_dump_status_updates(status_updates)
+        ))
+        yield ServerSentEvent(event="error", data="recursionLimitExceeded").encode()
+    except* Exception:
         logger.exception(f"Problem answering message in thread {thread.id}")
+        await repo.add(ThreadMessage(
+            thread_id=thread.id,
+            text="ERROR_GENERIC",
+            origin=ThreadMessageOrigin.SYSTEM,
+            parent_id=message.id,
+            status_updates=_dump_status_updates(status_updates)
+        ))
         yield ServerSentEvent(event="error").encode()
     finally:
         await UsageRepository(db).add(message_usage)
         del active_streaming_connections[thread.id]
 
+
+def _dump_status_updates(status_updates: List[AgentActionEvent]) -> Optional[List[dict]]:
+    return [event.model_dump(mode="json", by_alias=True) for event in status_updates] if status_updates else None
 
 @router.post(THREAD_PATH + "/stop", status_code=status.HTTP_200_OK)
 async def stop_message(thread_id: int,

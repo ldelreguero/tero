@@ -7,13 +7,14 @@ import { Agent } from '~/utils/agent'
 import ChatInput from '../../common/src/components/chat/ChatInput.vue'
 import AgentChatMenu from '../../common/src/components/common/AgentChatMenu.vue'
 import { AgentPrompt } from '../../common/src/utils/domain'
+import { useToolAuthModal } from '@tero/common/utils/useToolAuthModal.js'
 
 const props = defineProps<{
   messages: ChatMessage[], 
   minimized?: boolean, 
   agent: Agent, 
   audioTranscriber: (blob: Blob) => Promise<string>,
-  errorHandler: (error: unknown) => void
+  errorHandler: (error: any) => void
 }>()
 const emit = defineEmits<{
   (e: 'close'): void,
@@ -30,9 +31,20 @@ const inputText = ref('');
 const chatInputRef = ref<InstanceType<typeof ChatInput>>()
 
 const lastMessage = computed((): ChatMessage => props.messages[props.messages.length - 1])
+const allPrompts = ref<AgentPrompt[]>([])
+const starterPrompts = computed(() => allPrompts.value.filter(p => p.starter))
+
+const findPrompts = async () => {
+  if (!allPrompts.value.length) {
+    allPrompts.value = await props.agent.getPrompts()
+  }
+  return allPrompts.value
+}
+
+const { showToolAuthModal, toolAuthType, toolId, submitAuth, closeAuth } = useToolAuthModal()
 
 onMounted(async () => {
-  await chatInputRef.value?.focus();
+  await chatInputRef.value?.focus()
 });
 
 watch(props.messages, async () => {
@@ -72,6 +84,7 @@ const adjustMessagesScroll = async () => {
               }]" />
           </div>
         </div>
+        <ChatStarters v-if="messages.length === 0 && starterPrompts.length > 0" :prompts-starters="starterPrompts" :chat-input-ref="chatInputRef!" />
         <div class="h-full flex flex-col overflow-y-auto mb-4" ref="messagesDiv">
           <Message v-for="message in messages" :text="message.text" :is-user="message.isUser"
             :is-complete="message.isComplete" :is-success="message.isSuccess" :agent="agent" 
@@ -82,14 +95,14 @@ const adjustMessagesScroll = async () => {
           ref="chatInputRef"
           :chat="{ 
             supportsStopResponse: () => agent.supportsStopResponse(), 
-            findPrompts: async () => await agent.getPrompts(),
+            findPrompts: async () => await findPrompts(),
             savePrompt: async (p: AgentPrompt) => await agent.savePrompt(p),
             deletePrompt: async (id: number) => await agent.deletePrompt(id),
             supportsFileUpload: () => false, 
             supportsTranscriptions: () => agent.supportsTranscriptions(), 
             transcribe: async (blob: Blob) => audioTranscriber(blob), 
             handleError: errorHandler }"
-          :is-answering="!lastMessage || !lastMessage.isComplete"
+          :is-answering="!!(lastMessage && !lastMessage.isComplete)"
           :enable-prompts="true"
           :shareable-prompts="false"
           @send="emit('userMessage', inputText)"
@@ -97,7 +110,13 @@ const adjustMessagesScroll = async () => {
       </div>
     </template>
     <template v-slot:modalsContainer>
-      
+      <ToolAuthModal 
+        v-model:visible="showToolAuthModal" 
+        :tool-id="toolId"
+        :auth-type="toolAuthType"
+        @submit="submitAuth"
+        @cancel="closeAuth"
+      />
     </template>
   </PageOverlay>
 </template>

@@ -64,7 +64,6 @@ const MAX_FILES = 5
 const fileInputRef = ref<InstanceType<typeof FileInput> | null>(null)
 const attachedFiles = ref<UploadedFile[]>(props.initialFiles || [])
 const attachedFilesError = ref<ErrorMessage | undefined>(undefined)
-const allowedExtensions = ['pdf', 'txt', 'md', 'csv', 'xlsx', 'xls', 'png', 'jpg', 'jpeg', 'har', 'json', 'svg']
 
 const transcriptionRef = ref<InstanceType<typeof AudioTranscription> | null>(null)
 const isRecordingAudio = ref<boolean>(false);
@@ -97,10 +96,6 @@ const loadAgentPrompts = async () => {
     props.chat.handleError(error)
   }
 }
-
-watch(props.chat.findPrompts, async () => {
-  await loadAgentPrompts()
-})
 
 watch(inputText, async() => {
   if (inputText.value.startsWith('/') && props.enablePrompts !== false) {
@@ -149,6 +144,24 @@ const onKeydown = async (e: KeyboardEvent) => {
       selectedPromptIndex.value++
     }
   }
+}
+
+const onPaste = (event: ClipboardEvent) => {
+  if (!props.chat.supportsFileUpload()) return
+
+  const items = event.clipboardData?.items
+  if (!items?.length) return
+
+  const files = Array.from(items)
+    .filter((item) => item.kind === 'file')
+    .map((item) => item.getAsFile())
+    .filter((file): file is File => file !== null)
+
+  if (!files.length) return
+
+  event.preventDefault()
+  resetAttachedFilesError()
+  ;(fileInputRef.value as { addFiles?: (files: File[]) => void } | null)?.addFiles?.(files)
 }
 
 const sendMessage = async () => {
@@ -307,7 +320,7 @@ const handleAudioReady = async (blob: Blob) => {
     isCancellingTranscription.value = false
     return
   }
-  
+
   try {
     const text = await props.chat.transcribe(blob)
     isWaitingTranscript.value = false
@@ -330,7 +343,7 @@ const handleAudioReady = async (blob: Blob) => {
         trimmed +
         inputText.value.slice(end)
 
-    
+
     await nextTick()
     await focusInputAt(start + trimmed.length)
   } catch (error) {
@@ -364,7 +377,8 @@ const openFileBrowser = () => {
 defineExpose({
   focus,
   createPromptFromMessage,
-  selectPrompt
+  selectPrompt,
+  reloadPrompts: loadAgentPrompts
 })
 </script>
 
@@ -376,7 +390,7 @@ defineExpose({
           class="flex flex-col gap-1 relative rounded-xl bg-surface"
           :class="!borderless ? 'border focus-within:border-abstracta shadow-sm p-2' : ''">
           <div class="w-full absolute -translate-x-2 -translate-y-full -mt-6">
-            <PromptEditor v-if="editingPrompt" 
+            <PromptEditor v-if="editingPrompt"
               :editing-prompt="editingPrompt"
               :shareable="shareablePrompts"
               :prompt-saver="savePrompt"
@@ -387,49 +401,50 @@ defineExpose({
               :selected-prompt-index="selectedPromptIndex"
               :readonly="readonlyPrompts"
               @prompt-create="showCreatePrompt"
-              @prompt-select="selectPrompt" 
+              @prompt-select="selectPrompt"
               @prompt-edit="showEditPrompt"
               @prompt-delete="deletePrompt" />
           </div>
           <div class="w-full flex flex-col">
-            <FileInput 
+            <FileInput
               ref="fileInputRef"
               variant="zone"
               :disabled="!chat.supportsFileUpload()"
               :maxFiles="MAX_FILES"
-              :attachedFiles="attachedFiles" 
-              :allowedExtensions="allowedExtensions"
+              :attachedFiles="attachedFiles"
+              :allowedExtensions="['pdf', 'txt', 'md', 'csv', 'xlsx', 'xls', 'png', 'jpg', 'jpeg', 'har', 'json', 'svg']"
               @filesChange="onFilesChange"
               @error="attachedFilesError = $event">
                 <div class="w-full">
                   <!-- Using tailwindcss h-[] class is causing scroll to not working properly, using max-height inline style instead solves this issue -->
-                  <Textarea 
+                  <Textarea
                     ref="inputRef"
                     v-show="!isTranscribing"
                     v-model="inputText"
                     @keydown="onKeydown"
+                    @paste="onPaste"
                     :placeholder="t('placeholderNewMessage')"
                     auto-resize
                     :rows="1"
                     class="w-full !text-base !border-none !shadow-none min-h-[44px]"
                     :style="{ 'max-height': '200px' }" />
                   <AudioTranscription
-                    ref="transcriptionRef" 
-                    v-show="isTranscribing" 
-                    :transcription="isTranscribing" 
+                    ref="transcriptionRef"
+                    v-show="isTranscribing"
+                    :transcription="isTranscribing"
                     :error-handler="chat.handleError"
                     @audio-ready="handleAudioReady" />
                   <ErrorBox :error="attachedFilesError" />
-                  <ChatAttachments 
+                  <ChatAttachments
                     variant="input"
-                    :attached-files="attachedFiles" 
+                    :attached-files="attachedFiles"
                     @remove-file="removeAttachedFile"
                     @view-file="emit('viewFile', $event)" />
                 </div>
                 <div class="flex w-full justify-between">
                   <div class="flex items-center gap-2 mx-2">
-                    <SimpleButton 
-                      v-tooltip.top="MAX_FILES && attachedFiles.length >= MAX_FILES ? t('maxFilesReached', { max: MAX_FILES }) : t('manageFilesTooltip')" 
+                    <SimpleButton
+                      v-tooltip.top="MAX_FILES && attachedFiles.length >= MAX_FILES ? t('maxFilesReached', { max: MAX_FILES }) : t('manageFilesTooltip')"
                       :disabled="isTranscribing || attachedFiles.length >= MAX_FILES" v-show="chat.supportsFileUpload()"
                       @click="openFileBrowser">
                         <IconPaperclip/>
@@ -529,4 +544,4 @@ defineExpose({
     "manageFilesTooltip": "Adjuntar archivos"
   }
 }
-</i18n> 
+</i18n>

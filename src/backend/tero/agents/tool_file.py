@@ -5,9 +5,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi.background import BackgroundTasks
 
 from ..core import repos as repos_module
+from ..files.core import add_encoding_to_content_type, QuotaExceededError
 from ..files.domain import File, FileStatus, FileMetadata
-from ..files.file_quota import QuotaExceededError
-from ..files.parser import add_encoding_to_content_type
 from ..files.repos import FileRepository
 from ..tools.core import AgentTool
 from ..tools.repos import ToolRepository

@@ -145,8 +145,8 @@ async def test_update_agent(client: AsyncClient, users: List[UserListItem], team
     assert_response(
         resp,
         PublicAgent(id=AGENT_ID, name=update.name, description=update.description, last_update=CURRENT_TIME, team=teams[0], user_id=USER_ID,
-              model_id=cast(str, update.model_id), system_prompt=cast(str, update.system_prompt), temperature=cast(LlmTemperature, update.temperature), 
-              reasoning_effort=cast(ReasoningEffort, update.reasoning_effort), icon=update.icon, can_edit=True, user=users[0]))
+              model_id=cast(str, update.model_id), system_prompt=cast(str, update.system_prompt), temperature=cast(LlmTemperature, update.temperature),
+              reasoning_effort=cast(ReasoningEffort, update.reasoning_effort), recursion_limit=20, icon=update.icon, can_edit=True, user=users[0]))
 
 
 async def _update_agent(agent_id: int, update: AgentUpdate, client: AsyncClient) -> Response:
@@ -354,30 +354,30 @@ async def test_delete_non_existent_file(client: AsyncClient):
 
 async def _reprocess_agent_tool_file(client: AsyncClient, file_processor: FileProcessor):
     await _configure_docs_tool(client, FileProcessor.BASIC if file_processor == FileProcessor.ENHANCED else FileProcessor.ENHANCED)
-    
+
     file_content = await find_asset_bytes("Emma's routine.pdf")
-    
+
     filename = "Emma's routine.pdf"
     file_id = await upload_agent_tool_config_file(AGENT_ID, DOCS_TOOL_ID, client, filename, file_content)
     await _await_docs_tool_file_processed(file_id, client)
-    
+
     await _configure_docs_tool(client, file_processor)
-    
+
     resp = await _update_agent_tool_config_file(AGENT_ID, DOCS_TOOL_ID, file_id, client, filename, file_content)
     resp.raise_for_status()
-    
+
     await _await_docs_tool_file_processed(file_id, client)
-    
+
     resp = await client.get(AGENT_TOOL_FILE_PATH.format(agent_id=AGENT_ID, tool_id=DOCS_TOOL_ID, file_id=file_id))
     resp.raise_for_status()
     toolFile = resp.json()
-    
+
     assert toolFile["fileProcessor"] == file_processor.value
     content = toolFile["processedContent"]
-    
+
     expected_content = await find_asset_text(f"pdf_{file_processor.value.lower()}_content.txt")
     assert content.strip() == expected_content.strip()
-    
+
     return file_id
 
 
@@ -437,6 +437,7 @@ async def test_clone_agent(users: dict[int, UserListItem], last_agent_id: int,cl
         system_prompt="You are a helpful AI agent.",
         temperature=LlmTemperature.CREATIVE,
         reasoning_effort=ReasoningEffort.LOW,
+        recursion_limit=20,
         user=users[0]
     ))
 
@@ -445,7 +446,7 @@ async def _clone_agent(agent_id: int, client: AsyncClient) -> int:
     resp = await client.post(f"{AGENT_PATH.format(agent_id=agent_id)}/clone")
     resp.raise_for_status()
     return resp.json()["id"]
-    
+
 
 
 @pytest.fixture(name="last_prompt_id")
@@ -458,9 +459,9 @@ async def test_clone_agent_prompts(last_prompt_id: int,client: AsyncClient):
     cloned_agent_id = await _clone_agent(AGENT_ID, client)
     resp = await _find_agent_prompts(cloned_agent_id, client)
     assert_response(resp, [
-        AgentPromptPublic(id=last_prompt_id + 1, name="Test prompt private 1", content="Test prompt content", shared=False, 
+        AgentPromptPublic(id=last_prompt_id + 1, name="Test prompt private 1", content="Test prompt content", shared=False,
             last_update=CURRENT_TIME, user_id=USER_ID, can_edit=True, starter=False),
-        AgentPromptPublic(id=last_prompt_id + 2, name="Test prompt shared", content="Test shared prompt content", shared=True, 
+        AgentPromptPublic(id=last_prompt_id + 2, name="Test prompt shared", content="Test shared prompt content", shared=True,
             last_update=CURRENT_TIME, user_id=USER_ID, can_edit=True, starter=False)])
 
 
@@ -471,4 +472,4 @@ async def _find_agent_prompts(agent_id: int, client: AsyncClient) -> Response:
 async def test_find_default_agent(client: AsyncClient, teams: List[Team]):
     resp = await client.get(AGENTS_PATH + "/default")
     assert_response(resp, PublicAgent(id=6, name="GPT-5 Nano", description="This is the default agent", last_update=PAST_TIME, team=teams[0], user_id=None,
-              model_id="gpt-5-nano", system_prompt="You are a helpful AI agent.", temperature=LlmTemperature.NEUTRAL, reasoning_effort=ReasoningEffort.LOW, icon=None, can_edit=True, user=None))
+              model_id="gpt-5-nano", system_prompt="You are a helpful AI agent.", temperature=LlmTemperature.NEUTRAL, reasoning_effort=ReasoningEffort.LOW, recursion_limit=20, icon=None, can_edit=True, user=None))

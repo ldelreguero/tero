@@ -61,15 +61,16 @@ class ThreadListItem(BaseThread, CamelCaseModel):
     @staticmethod
     def from_thread(thread: Thread, last_message: Optional[datetime] = None, creation: Optional[datetime] = None) -> 'ThreadListItem':
         return ThreadListItem.model_validate(
-            {**thread.model_dump(), 
-             "agent": AgentListItem.from_agent(thread.agent, thread.agent.is_editable_by(thread.user)), 
-             "creation": thread.creation if creation is None else creation, 
+            {**thread.model_dump(),
+             "agent": AgentListItem.from_agent(thread.agent, thread.agent.is_editable_by(thread.user)),
+             "creation": thread.creation if creation is None else creation,
              "last_message": last_message})
 
 
 class ThreadMessageOrigin(Enum):
     USER = 'USER'
     AGENT = 'AGENT'
+    SYSTEM = 'SYSTEM'
 
 
 class ThreadMessageUpdate(CamelCaseModel):
@@ -111,7 +112,7 @@ class ThreadMessageFile(CamelCaseModel, table=True):
     __tablename__ : Any = "thread_message_file"
     thread_message_id: int = Field(primary_key=True, foreign_key="thread_message.id", index=True, ondelete="CASCADE")
     file_id: int = Field(primary_key=True, foreign_key="file.id", index=True, ondelete="CASCADE")
-    
+
     thread_message: "ThreadMessage" = Relationship(back_populates="files")
     file: "File" = Relationship()
 
@@ -135,7 +136,7 @@ class ThreadMessagePublic(CamelCaseModel, table=False):
     @staticmethod
     def from_message(message: ThreadMessage) -> 'ThreadMessagePublic':
         return ThreadMessagePublic.model_validate(
-            {**message.model_dump(), 
+            {**message.model_dump(),
              "files": [FileMetadata.from_file(m.file) for m in message.files if m.file] if message.files else None})
 
 

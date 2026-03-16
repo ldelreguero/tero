@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { TestCase, ThreadMessage, ThreadMessageOrigin, TestCaseResultStatus, TestSuiteRunStatus, TestCaseNewThreadMessage, TestCaseThreadMessageUpdate } from '@/services/api';
 import { useI18n } from 'vue-i18n';
-import { onMounted, ref, watch, computed, nextTick } from 'vue';
+import { onMounted, onUnmounted, ref, watch, computed, nextTick } from 'vue';
 import { ApiService, HttpError } from '@/services/api';
 import { AgentTestcaseChatUiMessage } from './AgentTestcaseChatMessage.vue';
 import AgentTestcaseInput from './AgentTestcaseInput.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 import { AnimationEffect } from '../../../../common/src/utils/animations';
+import { renderMarkDown } from '../../../../common/src/utils/formatter';
 import { useTestExecutionStore } from '@/composables/useTestExecutionStore';
 import { useTestCaseStore } from '@/composables/useTestCaseStore';
 import { IconArrowLeft, IconPencil, IconLoader2, IconSquareCheckFilled, IconSquareXFilled, IconSquareChevronsRightFilled } from '@tabler/icons-vue';
@@ -42,6 +43,7 @@ const isLoading = ref(false)
 const isComparingResultWithTestSpec = ref(false)
 const showDeleteConfirmation = ref(false)
 const messageToDelete = ref<AgentTestcaseChatUiMessage | undefined>()
+const streamFlushIntervalId = ref<ReturnType<typeof setInterval> | null>(null)
 const isRunning = computed(() => {
     if (executionState.value) {
         return executionState.value.phase === 'executing' || executionState.value.phase === 'evaluating'
@@ -76,6 +78,10 @@ onMounted(async () => {
 })
 
 const loadTestCaseData = async () => {
+    if (!props.isEditing && testCaseResult.value?.id && executionState.value?.phase === 'executing') {
+        messages.value = []
+        return
+    }
     isLoading.value = true
     try {
         if (props.isEditing) {
@@ -164,7 +170,7 @@ const handleInlineEditSave = async (message: AgentTestcaseChatUiMessage) => {
     message.isPlaceholder = false
     editingMessageUuid.value = undefined
     editingMessageText.value = ''
-    
+
     let currentTestCase = testCase.value;
     if (!currentTestCase) {
         currentTestCase = await addTestCase(props.agentId)
@@ -206,7 +212,7 @@ const handleInlineEditCancel = async () => {
     editingMessageUuid.value = undefined
     editingMessageText.value = ''
     editingMessageOriginalText.value = ''
-    
+
     const lastPlaceholder = getLastPlaceholder()
     if (lastPlaceholder) {
         selectedMessage.value = lastPlaceholder
@@ -232,11 +238,16 @@ const handleSelectTestCase = async (newTestCase: TestCase | undefined) => {
 
 watch(() => testCase.value, async (newVal, oldVal) => {
     if ((newVal?.thread.id !== oldVal?.thread.id || props.isNewTestCase) && (testCasesStore.testCases.length > 1 || !oldVal)) {
+        if (!oldVal && newVal && testCasesStore.testCases.length === 1) return
         await handleSelectTestCase(newVal)
     }
 })
 
 watch(() => testCaseResult.value, async () => {
+    if (executionState.value?.phase === 'executing') {
+        messages.value = []
+        return
+    }
     loadTestCaseData()
 })
 
@@ -244,8 +255,28 @@ watch([() => props.isEditing, () => props.isNewTestCase], async () => {
     await handleSelectTestCase(testCase.value)
 })
 
+const flushStreamToMessage = () => {
+    const state = executionState.value
+    if (!state?.agentMessage) return
+    const agentMsg = messages.value.slice().reverse().find((m: AgentTestcaseChatUiMessage) => !m.isUser)
+    if (agentMsg && agentMsg.id === state.agentMessage!.id) {
+        agentMsg.text = state.agentMessage!.text || ''
+    }
+}
+
+onUnmounted(() => {
+    if (streamFlushIntervalId.value != null) {
+        clearInterval(streamFlushIntervalId.value)
+        streamFlushIntervalId.value = null
+    }
+})
+
 watch(executionState, (newState) => {
     if (!newState) {
+        if (streamFlushIntervalId.value != null) {
+            clearInterval(streamFlushIntervalId.value)
+            streamFlushIntervalId.value = null
+        }
         const lastAgentMsg = messages.value.slice().reverse().find((m: AgentTestcaseChatUiMessage) => !m.isUser)
         if (lastAgentMsg && (lastAgentMsg.isStreaming || !lastAgentMsg.isStatusComplete)) {
             lastAgentMsg.isStreaming = false
@@ -269,6 +300,7 @@ watch(executionState, (newState) => {
 
     if (newState.agentMessage) {
         const agentText = newState.agentMessage.text || ''
+        const isStreaming = newState.phase === 'executing' && !newState.agentMessage?.complete
 
         let agentMsg = messages.value.slice().reverse().find((m: AgentTestcaseChatUiMessage) => !m.isUser)
 
@@ -280,13 +312,22 @@ watch(executionState, (newState) => {
                 newState.agentMessage?.id
             )
             messages.value.push(agentMsg)
-        } else {
+        } else if (!isStreaming) {
             agentMsg.text = agentText
         }
 
         agentMsg.id = newState.agentMessage.id
-        agentMsg.isStreaming = newState.phase === 'executing' && !newState.agentMessage?.complete
+        agentMsg.isStreaming = isStreaming
 
+        if (isStreaming && streamFlushIntervalId.value == null) {
+           // Batch token updates every 100ms to avoid re-rendering on every incoming token
+            streamFlushIntervalId.value = setInterval(flushStreamToMessage, 100)
+        }
+        if (!isStreaming && streamFlushIntervalId.value != null) {
+            clearInterval(streamFlushIntervalId.value)
+            streamFlushIntervalId.value = null
+            agentMsg.text = agentText
+        }
 
         if (newState.statusUpdates && newState.statusUpdates.length > 0) {
             agentMsg.statusUpdates = newState.statusUpdates.map((su: any) => ({
@@ -365,7 +406,7 @@ const saveMessageAsync = (message: AgentTestcaseChatUiMessage, currentTestCase: 
                 await refreshTestCase(props.agentId, currentTestCase.thread.id)
             }
         })
-        .catch((error: unknown) => {
+        .catch((error: any) => {
             handleError(error)
         })
 }
@@ -409,7 +450,7 @@ const statusDescription = computed(() => {
         case TestCaseResultStatus.SUCCESS:
             return t('successDescription')
         case TestCaseResultStatus.FAILURE:
-            return testCaseResult.value?.evaluatorAnalysis || t('failureDescription')
+            return renderMarkDown(testCaseResult.value?.evaluatorAnalysis || t('failureDescription'), true)
         case TestCaseResultStatus.ERROR:
             return t('errorDescription')
         default:
@@ -540,11 +581,11 @@ defineExpose({
                             <div v-if="!message.isUser && message.statusUpdates.length > 0" class="px-2 py-3">
                                 <ChatStatus :status-updates="message.statusUpdates" :is-complete="message.isStatusComplete" />
                             </div>
-                            <AgentTestcaseChatMessage 
+                            <AgentTestcaseChatMessage
                                 v-if="editingMessageUuid !== message.uuid"
                                 :message="message"
                                 :actions-enabled="!message.isPlaceholder && isEditing"
-                                :is-selected="selectedMessage?.uuid === message.uuid" 
+                                :is-selected="selectedMessage?.uuid === message.uuid"
                                 @select="handleSelectMessage"
                                 @delete="handleDeleteMessageRequest"
                                 :selectable="isMessageSelectable(message)" />
@@ -584,9 +625,7 @@ defineExpose({
                                 <IconLoader2 class="text-content-muted animate-spin" />
                                 <span>{{ t('testRunning') }}</span>
                             </div>
-                            <div v-else-if="testCaseResult" class="flex flex-row items-center gap-2">
-                                {{ statusDescription }}
-                            </div>
+                            <div v-else-if="testCaseResult" class="flex flex-col gap-2" v-html="statusDescription" />
                         </div>
                     </div>
                 </div>

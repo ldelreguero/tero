@@ -31,7 +31,7 @@ from .repos import TestCaseResultRepository, TestSuiteRunRepository, TestSuiteRu
 
 
 logger = logging.getLogger(__name__)
-EVALUATOR_HUMAN_MESSAGE = """
+EVALUATOR_DEFAULT_INSTRUCTIONS = """
 Compare the actual output with the reference output based on these criteria:
 1. Semantic equivalence - Does the actual output convey the same meaning as the reference output?
 2. Completeness - Does the actual output contain all key information from the reference output?
@@ -40,9 +40,9 @@ Compare the actual output with the reference output based on these criteria:
 5. Conciseness - Does the actual output avoid including extra information not present in the reference output? If the reference output is concise the response should also be concise for example if the reference output is "Agent response" the actual output should also be "Agent response" or similar.
 
 Be lenient with minor differences in wording, formatting, or style. Focus on whether the core meaning and key information match. Be strict about factual errors, missing critical information, or extraneous details that go beyond the expected output.
-
+""".strip()
+EVALUATOR_APPENDED_BLOCK = """
 Respond with 'Y' if the actual output sufficiently matches the reference output, or 'N' if there are significant discrepancies. Then provide a brief explanation.
-
 
 Input:
 {{inputs}}
@@ -52,7 +52,7 @@ Reference Output:
 
 Actual Output:
 {{outputs}}
-"""
+""".strip()
 EVALUATOR_DEFAULT_TEMPERATURE = LlmTemperature.NEUTRAL
 EVALUATOR_DEFAULT_REASONING_EFFORT = ReasoningEffort.MEDIUM
 
@@ -100,7 +100,8 @@ class BackgroundTestSuiteRunner:
         ))
 
     def _build_test_case_evaluator_prompt(self, evaluator: Optional[Evaluator]) -> ChatPromptTemplate:
-        human_message = evaluator.prompt if evaluator else EVALUATOR_HUMAN_MESSAGE
+        instructions = evaluator.prompt if evaluator else EVALUATOR_DEFAULT_INSTRUCTIONS
+        human_message = instructions.rstrip() + "\n\n" + EVALUATOR_APPENDED_BLOCK
         return ChatPromptTemplate(
             [("system", "You are an expert evaluator assessing whether the actual output from an AI agent matches the expected output for a given test case."),
                 ("human", human_message)],

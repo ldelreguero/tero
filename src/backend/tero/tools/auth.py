@@ -77,6 +77,7 @@ class ToolOAuthClientInfo(SQLModel, table=True):
 
 class ToolAuthRequest(CamelCaseModel):
     request_type: str
+    tool_id: str
     agent_id: int
 
 
@@ -93,7 +94,6 @@ class ToolOAuthRequest(ToolAuthRequest):
 
 class ToolAuthTokenRequest(ToolAuthRequest):
     request_type: str = "auth_token"
-    tool_id: str
 
 
 def build_tool_auth_request_http_exception(request: ToolAuthRequest) -> HTTPException:
@@ -303,7 +303,7 @@ class AgentToolOauth(OAuthClientProvider):
             code_verifier=self.code_verifier,
             token_endpoint=self.context.oauth_metadata.token_endpoint.unicode_string() if self.context.oauth_metadata else None)
         await self._oauth_repo.save_state(tool_state)
-        raise ToolAuthRequestException(ToolOAuthRequest(oauth_url=auth_url, oauth_state=self.state, agent_id=self._agent_id))
+        raise ToolAuthRequestException(ToolOAuthRequest(tool_id=self._tool_id, oauth_url=auth_url, oauth_state=self.state, agent_id=self._agent_id))
 
     # this is just to satisfy the callback_handler. It should never be called due to the redirect_handler
     async def _callback_handler(self) -> tuple[str, str | None]:

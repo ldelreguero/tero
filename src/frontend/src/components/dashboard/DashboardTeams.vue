@@ -273,8 +273,7 @@ watch(() => showModal.value, async () => {
     "closeConfirmTitle": "Discard changes?",
     "closeConfirmDescription": "You have unsaved changes. Are you sure you want to close without saving?",
     "continueEditButton": "Continue editing",
-    "discardChangesButton": "Discard changes",
-    "saving": "Saving..."
+    "discardChangesButton": "Discard changes"
   },
   "es": {
     "createTeam": "Crear",
@@ -289,7 +288,6 @@ watch(() => showModal.value, async () => {
     "closeConfirmTitle": "¿Descartar cambios?",
     "closeConfirmDescription": "Tienes cambios sin guardar. ¿Estás seguro de que quieres cerrar sin guardar?",
     "continueEditButton": "Continuar editando",
-    "discardChangesButton": "Descartar cambios",
-    "saving": "Guardando..."
+    "discardChangesButton": "Descartar cambios"
   }
 }</i18n>

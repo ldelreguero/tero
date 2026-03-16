@@ -22,10 +22,10 @@ CLONE_SUFFIX = "copy"
 
 class BaseAgent(CamelCaseModel, abc.ABC):
     id: int = Field(primary_key=True, default=None)
-    name: Optional[str] = Field(max_length=NAME_MAX_LENGTH, default=None)   
+    name: Optional[str] = Field(max_length=NAME_MAX_LENGTH, default=None)
     description: Optional[str] = Field(max_length=100, default=None)
     last_update: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     def set_default_name(self):
         self.name = f"Agent #{self.id}"
 
@@ -38,6 +38,7 @@ class AgentUpdate(CamelCaseModel):
     system_prompt: Optional[str] = None
     temperature: Optional[LlmTemperature] = None
     reasoning_effort: Optional[ReasoningEffort] = None
+    recursion_limit: Optional[int] = None
     publish_prompts: Optional[bool] = None
     team_id: Optional[int] = None
 
@@ -55,10 +56,11 @@ class Agent(BaseAgent, table=True):
     system_prompt: str = Field(sa_column=Column(Text))
     temperature: LlmTemperature = LlmTemperature.NEUTRAL
     reasoning_effort: ReasoningEffort = ReasoningEffort.LOW
+    recursion_limit: int = Field(default=20, ge=20, le=100)
     team_id: Optional[int] = Field(default=None, foreign_key="team.id")
     team: Optional[Team] = Relationship()
     evaluator_id: Optional[int] = Field(default=None, foreign_key="evaluator.id")
-    
+
     def update_with(self, update: AgentUpdate):
         update_dict = update.model_dump(exclude_none=True)
         update_dict["icon"] = base64.b64decode(update_dict["icon"]) if update_dict.get("icon") else None
@@ -79,7 +81,7 @@ class Agent(BaseAgent, table=True):
 
     def is_editable_by(self, user: User) -> bool:
         return self.user_id == user.id or any(
-            tr.role in [Role.TEAM_OWNER, Role.TEAM_EDITOR] and cast(Team, tr.team).id == self.team_id 
+            tr.role in [Role.TEAM_OWNER, Role.TEAM_EDITOR] and cast(Team, tr.team).id == self.team_id
             for tr in user.team_roles
         )
 
@@ -130,9 +132,10 @@ class PublicAgent(BaseAgent):
     system_prompt: str
     temperature: LlmTemperature
     reasoning_effort: ReasoningEffort
+    recursion_limit: int
     user: Optional[UserListItem] = None
     team: Optional[Team] = None
-    
+
     @staticmethod
     def from_agent(a: Agent, can_edit: bool) -> 'PublicAgent':
         agent_dict = a.model_dump()

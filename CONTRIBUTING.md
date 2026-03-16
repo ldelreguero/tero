@@ -33,6 +33,7 @@ Before submitting changes, please run checks and tests as described in [Automate
 - [Docker](https://www.docker.com/)
 - [devbox](https://www.jetpack.io/devbox)
 - [git-lfs](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)
+- If you use a Visual Studio Code based IDE (like Cursor, Antigravity, etc), then consider installing the [EditorConfig extension](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig) to apply all the rules defined in `.editorconfig` and keep the code format consistent.
 
 ### Setup
 

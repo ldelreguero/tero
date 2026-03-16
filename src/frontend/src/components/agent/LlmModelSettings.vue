@@ -90,3 +90,14 @@ const onChangeReasoningEffort = (value: ReasoningEffort) => {
   }
 }
 </i18n>
+
+<style scoped>
+:deep(.p-selectbutton) {
+  display: flex;
+  width: 100%;
+}
+:deep(.p-selectbutton button) {
+  flex: 1;
+  justify-content: center;
+}
+</style>
