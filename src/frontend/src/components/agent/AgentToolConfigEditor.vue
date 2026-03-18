@@ -5,7 +5,8 @@ import type { JSONSchema7, JSONSchema7Definition } from 'json-schema'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import Ajv, { type ErrorObject } from 'ajv'
 import addFormats from 'ajv-formats'
-import { AuthenticationError, handleOAuthRequestsIn } from '@/services/toolAuth';
+import { handleToolAuthRequestsIn } from '@/services/toolAuth';
+import { AuthenticationError } from '@tero/common/utils/toolAuth.js';
 import { AgentToolConfig, AgentTool } from '@/services/api'
 
 export class EditingToolConfig {
@@ -30,7 +31,6 @@ export class EditingToolConfig {
 <script setup lang="ts">
 import { ref, computed, onMounted, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IconX } from '@tabler/icons-vue'
 import { ApiService, findManifest, HttpError } from '@/services/api'
 
 const props = defineProps<{
@@ -50,6 +50,7 @@ const validationErrors = ref<string | null>(null)
 const saving = ref(false)
 const contactEmail = ref<string>('')
 const savedConfig = ref<Record<string, unknown> | undefined>()
+const allFilesRemoved = ref(false)
 const mutableConfig = reactive({ ...props.toolConfig.config || {} })
 let partialSave = false
 
@@ -146,6 +147,18 @@ const toolMessage = computed(() => {
   return ret != toolMessageKey ? ret : null
 })
 
+const hasFileProperties = computed(() =>
+  Object.values(toolProperties.value).some(prop => isFileProperty(prop) || isFileArrayProperty(prop))
+)
+
+const saveButtonText = computed(() => {
+  return hasFileProperties.value ? 'done' : 'save'
+})
+
+const isDoneDisabled = computed(() => {
+  return saving.value || (hasFileProperties.value && !savedConfig.value && !allFilesRemoved.value)
+})
+
 const isFileArrayProperty = (toolProp: JSONSchema7Definition) : boolean => {
   const toolPropSchema = js7(toolProp)
   return toolPropSchema?.type === 'array' && (js7(toolPropSchema?.items)?.$ref?.endsWith('/File') ?? false)
@@ -178,7 +191,8 @@ const onBeforeFileUpload = async (_: number) => {
   try {
     if (savedConfig.value != mutableConfig) {
       await api.configureAgentTool(props.toolConfig.agentId, new AgentToolConfig(props.toolConfig.toolId, mutableConfig))
-      savedConfig.value = mutableConfig
+      savedConfig.value = { ...mutableConfig }
+      allFilesRemoved.value = false
     }
   } catch (error) {
     await handleError(error)
@@ -190,6 +204,7 @@ const onAfterFileRemove = async (filesCount: number) => {
     if (filesCount === 0) {
       await api.removeAgentToolConfig(props.toolConfig.agentId, props.toolConfig.toolId)
       savedConfig.value = undefined
+      allFilesRemoved.value = true
     }
   } catch (error) {
     await handleError(error)
@@ -218,7 +233,7 @@ const saveToolConfig = async () => {
     // avoid saving tool when requires files and none have been uploaded
     if (savedConfig.value !== mutableConfig && !(Object.values(toolProperties.value).some(prop => isFileProperty(prop) || isFileArrayProperty(prop)) && !savedConfig.value)) {
       partialSave = true
-      ret = await handleOAuthRequestsIn(async () => {
+      ret = await handleToolAuthRequestsIn(async () => {
         // resetting this flag since we want to allow retry saving tool config to re open oauth popup, or allow cancelling oauth
         // when oauth popup is closed or just ignored
         saving.value = true
@@ -296,7 +311,7 @@ class ValidationErrors extends Error {
 </script>
 
 <template>
-  <FlexCard>
+  <FlexCard header-class="flex items-center justify-between">
     <template #header>
       <div class="flex w-full items-center justify-between">
         <div class="flex gap-2 items-center">
@@ -364,11 +379,11 @@ class ValidationErrors extends Error {
       </div>
       <div v-if="validationErrors" class="text-error-alt validation-errors" v-html="validationErrors"></div>
       <div class="flex justify-end gap-2" v-if="!viewMode">
-        <SimpleButton @click="onClose" variant="secondary" shape="square" :disabled="saving">
+        <SimpleButton v-if="!(hasFileProperties)" @click="onClose" variant="secondary" shape="square" :disabled="saving">
           {{ t('cancel') }}
         </SimpleButton>
-        <SimpleButton @click="saveToolConfig" variant="primary" shape="square" :disabled="saving">
-          {{ t('save') }}
+        <SimpleButton @click="saveToolConfig" variant="primary" shape="square" :disabled="isDoneDisabled">
+          {{ t(saveButtonText) }}
         </SimpleButton>
       </div>
     </div>
@@ -391,6 +406,7 @@ class ValidationErrors extends Error {
   {
     "en": {
       "save": "Save",
+      "done": "Done",
       "cancel": "Cancel",
       "close": "Close",
       "authenticationWindowBlocked": "The authentication popup could not be opened. Please check that popups are allowed for this site and try again.",
@@ -425,6 +441,7 @@ class ValidationErrors extends Error {
     },
     "es": {
       "save": "Guardar",
+      "done": "Listo",
       "cancel": "Cancelar",
       "close": "Cerrar",
       "authenticationWindowBlocked": "No se pudo abrir la ventana de autenticación. Por favor, verifica que las ventanas emergentes estén permitidas para este sitio y vuelve a intentarlo.",

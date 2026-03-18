@@ -5,7 +5,7 @@ import { fetchJson, fetchStreamJson, fetchResponse, streamFromResponse, ServerSe
 import { AgentFlow } from "./flow"
 import { addAgent, findAgentById, ExistingAgentError } from "./agent-repository"
 import { AgentPrompt } from "../../common/src/utils/domain"
-import { handleOAuthRequestsIn } from "./tool-oauth"
+import { handleToolAuthRequestsIn } from "./tool-oauth"
 
 export abstract class AgentSource {
   abstract findAgents(authService?: AuthService): Promise<Agent[]>;
@@ -354,7 +354,7 @@ export class TeroAgent extends Agent {
       formData.append("parentMessageId", parentMessageId.toString());
     }
     
-    yield* await handleOAuthRequestsIn(
+    yield* await handleToolAuthRequestsIn(
       async () => {
         const response = await fetchResponse(url, await Agent.buildHttpRequest("POST", formData, authService));
         const stream = await streamFromResponse(response, url);

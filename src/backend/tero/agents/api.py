@@ -14,9 +14,8 @@ from ..core.domain import CamelCaseModel
 from ..core.env import env
 from ..core.repos import get_db
 from ..files.api import build_file_download_response
+from ..files.core import QuotaExceededError, add_encoding_to_content_type
 from ..files.domain import File, FileStatus, FileUpdate, FileMetadata, FileMetadataWithContent
-from ..files.file_quota import QuotaExceededError
-from ..files.parser import add_encoding_to_content_type
 from ..files.repos import FileRepository
 from ..teams.domain import GLOBAL_TEAM_ID, Role
 from ..tools.core import AgentTool

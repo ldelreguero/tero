@@ -1,11 +1,12 @@
 import aiofiles
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from enum import Enum
+from functools import cache
 import logging
+from tokenizers import Tokenizer
 from typing import List, Any, Optional, cast, Sequence
 from uuid import UUID
-from enum import Enum
-import tiktoken
 
 from langchain_classic.indexes import SQLRecordManager, aindex
 from langchain_core.callbacks import AsyncCallbackHandler
@@ -32,12 +33,12 @@ from ...agents.domain import AgentToolConfig
 from ...ai_models import ai_factory
 from ...ai_models.domain import LlmModel
 from ...ai_models.repos import AiModelRepository
-from ...ai_models.vllm_provider import HuggingFaceTokenizerEncoding
 from ...core.assets import solve_asset_path
 from ...core.env import env
 from ...files.domain import File, FileProcessor
-from ...files.file_quota import FileQuota, CurrentQuota
+from ...files.core import FileQuota, CurrentQuota
 from ...files.parser import extract_file_text
+from ...files.processors.pdf import is_enhanced_pdf_processor_available
 from ...files.repos import FileRepository
 from ...threads.domain import AgentActionEvent, AgentAction
 from ...usage.domain import Usage, MessageUsage, UsageType
@@ -48,21 +49,14 @@ from .domain import DocToolFile, DocToolConfig
 from .repos import DocToolFileRepository, DocToolConfigRepository
 
 
-
 logger = logging.getLogger(__name__)
 DOCS_TOOL_ID = "docs"
 ADVANCED_FILE_PROCESSING = "advancedFileProcessing"
 
 
-def embedding_tokens_from_text(text: str) -> int:
-    embeddings_encoding = tiktoken.encoding_for_model(env.embedding_model)
-    return len(embeddings_encoding.encode(text))
-
-
 class DocumentUrlSolvingRetriever(VectorStoreRetriever):
     agent_id: int
     tool_id: str
-    embedding_usage: Usage
 
     async def _aget_relevant_documents(
         self,
@@ -71,7 +65,6 @@ class DocumentUrlSolvingRetriever(VectorStoreRetriever):
         run_manager: AsyncCallbackManagerForRetrieverRun,
         **kwargs: Any,
     ) -> list[Document]:
-        self.embedding_usage.increment(embedding_tokens_from_text(query), env.embedding_cost_per_1k_tokens)
         ret = await super()._aget_relevant_documents(
             query, run_manager=run_manager, **kwargs
         )
@@ -97,7 +90,7 @@ class DocsTool(AgentToolWithFiles):
 
     @model_validator(mode="after")
     def remove_advanced_processing_if_not_configured(self):
-        if not env.azure_doc_intelligence_endpoint or not env.azure_doc_intelligence_key:
+        if not is_enhanced_pdf_processor_available():
             self.config_schema["properties"].pop(ADVANCED_FILE_PROCESSING)
             self.config_schema["required"].remove(ADVANCED_FILE_PROCESSING)
         return self
@@ -136,7 +129,8 @@ class DocsTool(AgentToolWithFiles):
 
     def _build_vectorstore(self):
         ai_provider = ai_factory.get_provider(env.embedding_model)
-        return PGVector(embeddings=ai_provider.build_embedding(env.embedding_model), connection=self._get_async_engine(),
+        usage_tracker = lambda tokens: self.embedding_usage.increment(tokens, env.embedding_cost_per_1k_tokens)
+        return PGVector(embeddings=ai_provider.build_embedding(env.embedding_model, usage_tracker), connection=self._get_async_engine(),
                         collection_name=self._build_collection_name(self.agent.id), use_jsonb=True)
 
     async def add_file(self, file: File, user: User):
@@ -156,24 +150,32 @@ class DocsTool(AgentToolWithFiles):
             file.processed_content = file_doc.page_content
             await FileRepository(self.db).update(file)
             await self._update_tool_description_with_file(file, model, message_usage)
-            docs = MarkdownTextSplitter.from_tiktoken_encoder(encoding_name=tiktoken.encoding_for_model(env.embedding_model).name,
-                                        chunk_size=env.docs_tool_chunk_size, chunk_overlap=env.docs_tool_chunk_overlap).split_documents([file_doc])
-            embeddings_tokens = sum(embedding_tokens_from_text(doc.page_content) for doc in docs)
-            self.embedding_usage.increment(embeddings_tokens, env.embedding_cost_per_1k_tokens)
-            await aindex(docs, self._build_record_manager(), self._build_vectorstore(), cleanup="incremental",
-                            source_id_key="id", key_encoder="sha256")
-
+            await aindex(
+                self._split_file_content(file_doc),
+                self._build_record_manager(),
+                self._build_vectorstore(),
+                cleanup="incremental",
+                source_id_key="id",
+                key_encoder="sha256")
         finally:
             usage_repo = UsageRepository(self.db)
             await usage_repo.add(pdf_parsing_usage)
             await usage_repo.add(message_usage)
             await usage_repo.add(self.embedding_usage)
-        
+
     async def _update_tool_description_with_file(self, file: File, model: LlmModel, message_usage: MessageUsage):
         description = await self._generate_file_description(file, model, message_usage)
         await DocToolFileRepository(self.db).add(
             DocToolFile(file_id=file.id, description=description, agent_id=self.agent.id))
         await self._update_tool_description(model, message_usage)
+
+    def _split_file_content(self, file_doc: Document) -> list[Document]:
+        ai_provider = ai_factory.get_provider(env.embedding_model)
+        text_splitter = MarkdownTextSplitter(
+            length_function=lambda text: ai_provider.count_tokens(text, env.embedding_model),
+            chunk_size=env.docs_tool_chunk_size,
+            chunk_overlap=env.docs_tool_chunk_overlap)
+        return text_splitter.split_documents([file_doc])
 
     async def _find_description_model(self) -> LlmModel:
         ret = await AiModelRepository(self.db).find_by_id(env.internal_generator_model)
@@ -188,35 +190,22 @@ class DocsTool(AgentToolWithFiles):
         return Document(page_content=content, metadata=metadata)
 
     async def _generate_file_description(self, file: File, model: LlmModel, message_usage: MessageUsage) -> str:
+        llm = ai_factory.build_chat_model(model.id, env.internal_generator_temperature)
         async with aiofiles.open(solve_asset_path('file-description-prompt.md', __file__)) as f:
             system_prompt = await f.read()
-        text_splitter = self._create_text_splitter(model.id)
+        text_splitter = CharacterTextSplitter(
+            length_function=lambda text: llm.get_num_tokens(text),
+            chunk_size=env.docs_tool_description_chunk_size,
+            chunk_overlap=env.docs_tool_description_chunk_overlap)
         chunks = text_splitter.split_text(cast(str, file.processed_content))
         ret = "none"
         for chunk in chunks:
             prompt = system_prompt + f"Previous Description: {ret}\n\n" + f"## File contents\n\n{chunk}"
-            ret = await self._generate_description(prompt, 200, model, message_usage)
+            ret = await self._generate_description(prompt, 200, llm, model, message_usage)
         return ret
 
     @staticmethod
-    def _create_text_splitter(model_id: str) -> CharacterTextSplitter:
-        hf_tokenizer = HuggingFaceTokenizerEncoding.from_pretrained(model_id)
-        if hf_tokenizer:
-            return CharacterTextSplitter(
-                chunk_size=env.docs_tool_description_chunk_size,
-                chunk_overlap=env.docs_tool_description_chunk_overlap,
-                length_function=lambda text: len(hf_tokenizer.encode(text)),
-            )
-        
-        return CharacterTextSplitter.from_tiktoken_encoder(
-            model_name=model_id,
-            chunk_size=env.docs_tool_description_chunk_size,
-            chunk_overlap=env.docs_tool_description_chunk_overlap,
-        )
-
-    @staticmethod
-    async def _generate_description(prompt: str, max_length: int, model: LlmModel, message_usage: MessageUsage) -> str:
-        llm = ai_factory.build_chat_model(model.id, env.internal_generator_temperature)
+    async def _generate_description(prompt: str, max_length: int, llm: BaseChatModel, model: LlmModel, message_usage: MessageUsage) -> str:
         response = await llm.ainvoke([HumanMessage(prompt)])
         response = cast(AIMessage, response)
         message_usage.increment_with_metadata(response.usage_metadata, model)
@@ -241,12 +230,13 @@ class DocsTool(AgentToolWithFiles):
             prompt = await f.read()
         for f in files:
             prompt += f"\n- {f.description}"
-        return await self._generate_description(prompt, 200, model, message_usage)
+        llm = ai_factory.build_chat_model(model.id, env.internal_generator_temperature)
+        return await self._generate_description(prompt, 200, llm, model, message_usage)
 
     async def update_file(self, file: File, user: User):
         # clear processed content before update to avoid partial quota-exceeded state
         await self._remove_file_processed_content(file)
-        await self._handle_file(file, user)            
+        await self._handle_file(file, user)
 
     async def remove_file(self, file: File):
         # langchain does not provide an abstraction to just remove one document from the index, so we built this logic
@@ -318,8 +308,7 @@ class DocsTool(AgentToolWithFiles):
             vectorstore=self._build_vectorstore(),
             search_kwargs={"k": env.docs_tool_retrieve_top},
             agent_id=self.agent.id,
-            tool_id=self.id,
-            embedding_usage=self.embedding_usage,
+            tool_id=self.id
         )
 
     @staticmethod

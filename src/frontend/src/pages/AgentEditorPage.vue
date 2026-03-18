@@ -10,7 +10,9 @@ import { useToast } from 'vue-toastification';
 import ToastMessage from '@/components/common/ToastMessage.vue';
 import { useTestCaseStore } from '@/composables/useTestCaseStore';
 import { useTestExecutionStore } from '@/composables/useTestExecutionStore';
-import { handleOAuthRequestsIn, AuthenticationError } from '@/services/toolAuth';
+import { useToolAuthModal } from '@tero/common/utils/useToolAuthModal.js';
+import { handleToolAuthRequestsIn } from '@/services/toolAuth';
+import { AuthenticationError } from '@tero/common/utils/toolAuth.js';
 
 export type { TestCaseExecutionState } from '@/composables/useTestExecutionStore';
 
@@ -31,6 +33,8 @@ const testCasePanel = ref<InstanceType<typeof AgentTestcasePanel>>();
 const loadingTests = ref<boolean>(true);
 const testRunStartedByCurrentUser = ref<boolean>(false);
 const isComparingResultWithTestSpec = ref<boolean>(false);
+
+const { showToolAuthModal, toolAuthType, toolId, submitAuth, closeAuth } = useToolAuthModal()
 
 const startChat = async () => {
   try {
@@ -102,7 +106,7 @@ const runTestSuite = async (testCaseIds?: number[]) => {
 
   try {
     initializeTestRun(agentId.value!, testCasesStore.testCases, testCaseIds?.[0])
-    const suiteRun = await handleOAuthRequestsIn(
+    const suiteRun = await handleToolAuthRequestsIn(
       () => api.runTestSuite(agentId.value!, testCaseIds),
       api
     )
@@ -239,6 +243,13 @@ onBeforeRouteUpdate(async (to) => {
         @compare-result-with-test-spec-state-changed="isComparingResultWithTestSpec = $event" />
     </template>
   </PageLayout>
+  <ToolAuthModal 
+    v-model:visible="showToolAuthModal" 
+    :tool-id="toolId"
+    :auth-type="toolAuthType"
+    @submit="submitAuth"
+    @cancel="closeAuth"
+  />
 </template>
 
 <i18n lang="json">

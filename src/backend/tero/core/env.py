@@ -30,13 +30,13 @@ class Settings(BaseSettings):
     disable_publish_global : Optional[bool] = False
     contact_email : str
     azure_app_insights_connection : Optional[str] = None
-    azure_endpoints : list[str]
-    azure_api_keys : list[SecretStr]
-    azure_api_version : str
-    azure_model_deployments : dict[str, AzureModelDeployment]
+    azure_endpoints : list[str] = []
+    azure_api_keys : list[SecretStr] = []
+    azure_api_version : Optional[str] = None
+    azure_model_deployments : dict[str, AzureModelDeployment] = {}
     azure_doc_intelligence_endpoint : Optional[str] = None
     azure_doc_intelligence_key : Optional[SecretStr] = None
-    azure_doc_intelligence_cost_per_1k_pages_usd : float
+    azure_doc_intelligence_cost_per_1k_pages_usd : Optional[float] = None
     temperatures: dict[str, float]
     monthly_usd_limit_default : int
     internal_generator_model : str
@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     agent_basic_models : List[str]
     default_agent_name : str
     embedding_model : str
+    embedding_context_limit : int = 8191
     embedding_cost_per_1k_tokens : float
     transcription_model : str
     aws_access_key_id : Optional[SecretStr] = None
@@ -56,6 +57,9 @@ class Settings(BaseSettings):
     google_model_id_mapping : dict[str, str]
     openai_api_key : Optional[SecretStr] = None
     openai_model_id_mapping : dict[str, str]
+    vllm_urls : List[str] = []
+    vllm_api_keys : List[SecretStr] = []
+    vllm_model_id_mapping : dict[str, str] = {}
     docs_tool_chunk_size : int
     docs_tool_chunk_overlap : int
     docs_tool_retrieve_top : int
@@ -71,9 +75,6 @@ class Settings(BaseSettings):
     web_tool_google_cost_per_1k_searches_usd : float
     browser_tool_playwright_mcp_url : str
     browser_tool_playwright_output_dir : str
-    vllm_base_url : Optional[str] = None
-    vllm_api_key : Optional[SecretStr] = None
-    vllm_model_id_mapping : dict[str, str] = {}
     
     def is_local_env(self) -> bool:
         found = re.search('@([^/]+)(?:\\d+)?/', self.db_url)
@@ -102,7 +103,7 @@ class Settings(BaseSettings):
     def decode_temperatures(cls, v: str) -> dict[str, float]:
         return {k: float(v) for k, v in (pair.split(':', 1) for pair in v.split(','))} if v else {}
     
-    @field_validator('allowed_users', 'azure_endpoints', 'azure_api_keys', 'agent_basic_models', mode='before')
+    @field_validator('allowed_users', 'azure_endpoints', 'azure_api_keys', 'agent_basic_models', 'vllm_urls', 'vllm_api_keys', mode='before')
     @classmethod
     def decode_list(cls, v: str) -> list[str]:
         return v.split(',') if v else []

@@ -43,6 +43,7 @@ onMounted(async () => {
 watch(() => props.agentId, async (newAgentId) => {
     if (newAgentId) {
         await loadAgentPrompts(newAgentId)
+        await chatInputRef.value?.reloadPrompts()
     }
 })
 

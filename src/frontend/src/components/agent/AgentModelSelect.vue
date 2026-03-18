@@ -5,7 +5,13 @@ import { LlmModel, LlmModelVendor, LlmTemperature, ReasoningEffort } from '@/ser
 import openAiIcon from '@/assets/images/open-ai.svg?raw'
 import googleIcon from '@/assets/images/gemini.svg?raw'
 import anthropicIcon from '@/assets/images/anthropic.svg?raw'
+import qwenIcon from '@/assets/images/qwen.svg?raw'
+import openAiIsotipo from '@/assets/images/openai-iso.svg?raw'
+import googleIsotipo from '@/assets/images/gemini-iso.svg?raw'
+import anthropicIsotipo from '@/assets/images/anthropic-iso.svg?raw'
+import qwenIsotipo from '@/assets/images/qwen-iso.svg?raw'
 import LlmModelSettings from './LlmModelSettings.vue'
+import GroupedSelectPanel, { type GroupedSelectPanelOptionGroup } from '@/components/common/GroupedSelectPanel.vue'
 
 const props = defineProps<{
   modelId?: string
@@ -24,16 +30,14 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const showAllModels = ref(false)
+const searchQuery = ref('')
 
-const findSelectedModel = (): LlmModel | undefined => {
-  return props.models.find((m) => m.id === props.modelId)
-}
+const selectedModel = computed(() => props.models.find((m) => m.id === props.modelId))
 
 const updateShowAllModels = () => {
-  const selectedModel = findSelectedModel()
-  if (selectedModel && !selectedModel.isBasic) {
+  if (selectedModel.value && !selectedModel.value.isBasic) {
     showAllModels.value = true
-  } else if (!selectedModel) {
+  } else if (!selectedModel.value) {
     showAllModels.value = false
   }
 }
@@ -46,153 +50,142 @@ onMounted(() => {
   updateShowAllModels()
 })
 
-const onShowAllModels = () => {
-  showAllModels.value = true
+const modelType = computed(() => selectedModel.value?.modelType)
+
+const vendorLogos: Record<LlmModelVendor, { logo: string; isotipo: string }> = {
+  [LlmModelVendor.OPENAI]: { logo: openAiIcon, isotipo: openAiIsotipo },
+  [LlmModelVendor.GOOGLE]: { logo: googleIcon, isotipo: googleIsotipo },
+  [LlmModelVendor.ANTHROPIC]: { logo: anthropicIcon, isotipo: anthropicIsotipo },
+  [LlmModelVendor.QWEN]: { logo: qwenIcon, isotipo: qwenIsotipo }
 }
 
-const modelOptions = computed(() => {
-  if (showAllModels.value) {
-    return props.models
+const groupByVendor = (models: LlmModel[]): Map<LlmModelVendor, LlmModel[]> => {
+  const map = new Map<LlmModelVendor, LlmModel[]>()
+  for (const model of models) {
+    const list = map.get(model.modelVendor)
+    if (list) list.push(model)
+    else map.set(model.modelVendor, [model])
   }
-  return props.models.filter((m) => m.isBasic)
+  return map
+}
+
+const groupedModelOptions = computed<GroupedSelectPanelOptionGroup[]>(() => {
+  let list: LlmModel[]
+  if (showAllModels.value) {
+    list = props.models
+  } else {
+    const basic = props.models.filter((m) => m.isBasic)
+    const selected = selectedModel.value
+    list = selected && !selected.isBasic && !basic.some((m) => m.id === selected.id) ? [...basic, selected] : basic
+  }
+
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    list = list.filter(({ modelVendor, name }) => [modelVendor?.toString(), name].some((v) => v?.toLowerCase().includes(q)))
+  }
+  return [...groupByVendor(list).entries()].map(([vendor, models]) => ({
+    id: vendor,
+    icon: vendorLogos[vendor]!.logo,
+    name: vendor,
+    children: models.map((model) => ({
+      id: model.id,
+      name: model.name,
+      description: model.description
+    }))
+  }))
 })
 
-const groupedModelsByVendor = (modelsToGroup: LlmModel[]) => {
-  const map = new Map<LlmModelVendor, LlmModel[]>();
+const groupedSelectPanelRef = ref<InstanceType<typeof GroupedSelectPanel>>()
 
-  for (const model of modelsToGroup) {
-    if (!map.has(model.modelVendor)) {
-      map.set(model.modelVendor, []);
-    }
-    map.get(model.modelVendor)!.push(model);
-  }
-
-  return Array.from(map.values());
-}
-
-const flatOptions = computed(() => {
-  const modelsToGroup = modelOptions.value
-  const models = groupedModelsByVendor(modelsToGroup);
-  return models.flatMap((vendorModels) => vendorModels.map((m, i) => ({ ...m, vendor: m.modelVendor, showVendor: i === 0 })));
-});
-
-const vendorLogos: Record<LlmModelVendor, string | undefined> = {
-  [LlmModelVendor.OPENAI]: openAiIcon,
-  [LlmModelVendor.GOOGLE]: googleIcon,
-  [LlmModelVendor.ANTHROPIC]: anthropicIcon
+const onShowAllModels = () => {
+  groupedSelectPanelRef.value?.onShowDropdown()
 }
 
 const onModelChange = (value: string) => {
   emit('update:modelId', value)
   emit('change')
+  groupedSelectPanelRef.value?.onShowDropdown()
 }
 
-const modelType = computed(() => findSelectedModel()?.modelType)
-
-const onSettingsChange = () => {
-  emit('change')
+const onSearch = (value: string) => {
+  searchQuery.value = value
+  if (value?.trim()) {
+    showAllModels.value = true
+  }
 }
+
+const containerRef = ref<HTMLDivElement>()
+const selectedOptionId = computed(() => selectedModel.value?.id ?? null)
+const visibleOptions = computed(() => groupedModelOptions.value.filter((option) => option.children!.length > 0))
 </script>
 
 <template>
-  <div class="flex flex-row gap-3" id="agent-model-container">
-    <div class="form-field w-full">
+  <div class="flex flex-row gap-3 relative" ref="containerRef">
+    <div class="form-field flex-1">
       <label for="model">{{ t('modelLabel') }}</label>
-      <Select
-        id="model"
-        :model-value="modelId"
-        @update:model-value="onModelChange"
-        option-label="name"
-        option-value="id"
-        class="w-full"
-        appendTo="#agent-model-container"
-        overlay-class="left-8! mt-[-20px]! w-[calc(100%-64px)]! p-2! pr-0!"
-        :options="flatOptions"
-      >
-        <template #option="slotProps">
-          <div class="flex items-stretch gap-3 w-full">
-            <div class="w-32 flex items-center self-stretch">
-              <span v-if="slotProps.option.showVendor && slotProps.option.vendor && vendorLogos[slotProps.option.vendor as LlmModelVendor]"
-                v-html="vendorLogos[slotProps.option.vendor as LlmModelVendor]"
-                class="flex items-center text-content"
-              />
-            </div>
-            <div :class="['flex-1 flex flex-col gap-1 hover:bg-surface-muted rounded-md p-3', slotProps.selected ? 'selected-option' : '']">
-              <div class="font-medium">{{ slotProps.option.name }}</div>
-              <div class="text-sm font-normal break-words whitespace-normal">{{ slotProps.option.description }}</div>
+      <button class="flex items-center w-full border rounded-xl p-2 justify-between focus:border-abstracta" type="button" @click="onShowAllModels">
+        <span class="flex flex-row items-center gap-2">
+          <span v-html="vendorLogos[selectedModel?.modelVendor as LlmModelVendor]!.isotipo" class="flex items-center" />
+          {{ selectedModel?.name }}
+        </span>
+        <IconCaretDown class="fill-abstracta border-none" />
+      </button>
+      <GroupedSelectPanel ref="groupedSelectPanelRef" :search-placeholder="t('searchPlaceholder')" :container="containerRef" :show-load-more="!showAllModels && models.some((m) => !m.isBasic)" @search="onSearch" @load-more="showAllModels = true">
+        <template #content>
+          <div v-if="visibleOptions.length > 0" class="flex flex-row items-center gap-2">
+            <div class="flex flex-col items-stretch w-full">
+              <div v-for="(option, index) in visibleOptions" :key="option.id" class="py-3" :class="[index < visibleOptions.length - 1 && 'border-b-2 border-dotted']">
+                <div class="flex flex-row items-start gap-3 w-full">
+                  <div class="w-36 shrink-0 pt-2 flex items-center gap-2">
+                    <span v-if="typeof option.icon === 'string'" v-html="option.icon" class="flex items-center" />
+                    <component v-else :is="option.icon" class="flex items-center" />
+                  </div>
+                  <div class="flex-1 min-w-0 flex flex-col gap-2">
+                    <div
+                      v-for="optionItem in option.children"
+                      :key="optionItem.id"
+                      class="flex flex-col gap-2 hover:bg-surface-muted rounded-2xl p-2 px-4 cursor-pointer"
+                      :class="{ 'bg-surface-muted': selectedOptionId === optionItem.id }"
+                      @click="onModelChange(optionItem.id)"
+                    >
+                      <span v-if="optionItem.name" class="font-semibold">{{ optionItem.name }}</span>
+                      <span>{{ optionItem.description }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </template>
-        <template #dropdownicon>
-          <IconCaretRightFilled />
-        </template>
-        <template #footer>
-          <div class="p-3 flex justify-center" v-if="!showAllModels">
-            <SimpleButton @click="onShowAllModels" shape="square">{{ t('showAllModels') }}</SimpleButton>
+          <div v-else class="text-sm text-content-muted text-center py-2 min-h-[30vh] flex items-center justify-center">
+            {{ t('noOptionsPlaceholder') }}
           </div>
         </template>
-      </Select>
+      </GroupedSelectPanel>
     </div>
-    <LlmModelSettings
-      :model-type="modelType"
-      :temperature="props.temperature"
-      :reasoning-effort="props.reasoningEffort"
-      @update:temperature="(value) => emit('update:temperature', value)"
-      @update:reasoning-effort="(value) => emit('update:reasoningEffort', value)"
-      @change="onSettingsChange"
-    />
+    <div class="form-field w-1/2">
+      <LlmModelSettings
+        :model-type="modelType"
+        :temperature="temperature"
+        :reasoning-effort="reasoningEffort"
+        @update:temperature="(value) => emit('update:temperature', value)"
+        @update:reasoning-effort="(value) => emit('update:reasoningEffort', value)"
+        @change="emit('change')"
+      />
+    </div>
   </div>
 </template>
 
 <i18n lang="json">
-  {
-    "en": {
-      "showAllModels": "Show all",
-      "modelLabel": "Model"
-    },
-    "es": {
-      "showAllModels": "Mostrar todos",
-      "modelLabel": "Modelo"
-    }
+{
+  "en": {
+    "modelLabel": "Model",
+    "searchPlaceholder": "Search model...",
+    "noOptionsPlaceholder": "No models found"
+  },
+  "es": {
+    "modelLabel": "Modelo",
+    "searchPlaceholder": "Buscar modelo...",
+    "noOptionsPlaceholder": "No se han encontrado modelos"
   }
+}
 </i18n>
-<style scoped lang="scss">
-
-:deep(.p-select-list) {
-  gap: 8px !important;
-}
-
-:deep(.p-select-option) {
-  padding: 0 !important;
-}
-
-:deep(.p-select-option.p-select-option-selected) {
-  background: transparent !important;
-}
-
-:deep(.p-select-option.p-focus) {
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.selected-option {
-  background-color: var(--color-surface-muted);
-}
-
-:deep(.p-select-overlay) {
-  max-height: 50vh!important;
-  display: flex!important;
-  flex-direction: column!important;
-}
-
-:deep(.p-select-list-container) {
-  max-height: calc(45vh - 60px)!important;
-  overflow-y: auto!important;
-  flex: 1!important;
-}
-
-:deep(.p-select-footer) {
-  flex-shrink: 0!important;
-  border-top: 1px solid var(--color-auxiliar-gray)!important;
-}
-</style>

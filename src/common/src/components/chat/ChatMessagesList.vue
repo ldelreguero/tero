@@ -22,7 +22,7 @@ const emit = defineEmits<{
 
 <template>
   <div v-for="(message, index) in messages" :key="message.uuid">
-    <ChatMessage :message="message" v-if="showMessageIndexes[depth] == index" 
+    <ChatMessage :message="message" v-if="showMessageIndexes[depth] == index"
       :selectedIndex="showMessageIndexes[depth]"
       :siblingsCount="messages.length"
       :actionsEnabled="actionsEnabled"
@@ -37,7 +37,7 @@ const emit = defineEmits<{
   </div>
   <!-- Recursive rendering for children -->
   <div v-for="(message, idx) in messages" :key="message.uuid">
-    <ChatMessagesList :messages="message.children" :actionsEnabled="actionsEnabled" :depth="depth + 1" 
+    <ChatMessagesList :messages="message.children" :actionsEnabled="actionsEnabled" :depth="depth + 1"
     :isEditingAgent="isEditingAgent"
       :showMessageIndexes="showMessageIndexes"
       :feedbackLoadingMessageId="feedbackLoadingMessageId"

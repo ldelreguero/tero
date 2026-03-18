@@ -32,11 +32,11 @@ async def estimate_minutes_saved(user_message: str, agent_response: str, thread:
         HumanMessage(content=user_message),
         AIMessage(content=agent_response),
     ] + [
-        HumanMessage(content=message.text) if message.origin == ThreadMessageOrigin.USER else AIMessage(content=message.text) 
-        for message in thread_messages
+        HumanMessage(content=message.text) if message.origin == ThreadMessageOrigin.USER else AIMessage(content=message.text)
+        for message in thread_messages if message.origin != ThreadMessageOrigin.SYSTEM
     ] + [
-        HumanMessage(content=message.text) if message.origin == ThreadMessageOrigin.USER else AIMessage(content=message.text) 
-        for message in feedback_messages
+        HumanMessage(content=message.text) if message.origin == ThreadMessageOrigin.USER else AIMessage(content=message.text)
+        for message in feedback_messages if message.origin != ThreadMessageOrigin.SYSTEM
     ]
 
     token_counter = llm.get_num_tokens_from_messages
@@ -58,11 +58,11 @@ async def estimate_minutes_saved(user_message: str, agent_response: str, thread:
     )
 
     system_prompt = SYSTEM_PROMPT.format(
-        agent_name=thread.agent.name, 
+        agent_name=thread.agent.name,
         agent_description=thread.agent.description,
-        user_message=trimmed_messages.pop(0).content if trimmed_messages else "[NO USER MESSAGE]", 
-        agent_response=trimmed_messages.pop(0).content if trimmed_messages else "[NO AGENT RESPONSE]", 
-        previous_message=trimmed_messages.pop(0).content if trimmed_messages and thread_messages else "[NO PREVIOUS USER MESSAGE IN CONVERSATION]", 
+        user_message=trimmed_messages.pop(0).content if trimmed_messages else "[NO USER MESSAGE]",
+        agent_response=trimmed_messages.pop(0).content if trimmed_messages else "[NO AGENT RESPONSE]",
+        previous_message=trimmed_messages.pop(0).content if trimmed_messages and thread_messages else "[NO PREVIOUS USER MESSAGE IN CONVERSATION]",
         previous_agent_response=trimmed_messages.pop(0).content if trimmed_messages and thread_messages else "[NO PREVIOUS AGENT RESPONSE IN CONVERSATION]",
         reference_examples=_add_reference_examples(feedback_messages, trimmed_messages)
     )
@@ -88,11 +88,11 @@ def _add_reference_examples(feedback_thread_messages: List[ThreadMessage], feedb
         feedback_thread_messages = feedback_thread_messages[2:]
 
         examples.append(f"""
-Reference example {len(examples) + 1}: 
+Reference example {len(examples) + 1}:
 User message: \"\"\"{user_message.content}\"\"\"
 Agent response: \"\"\"{agent_response.content}\"\"\"
 Minutes saved: {minutes_saved}""")
-        
+
     return "\n".join(examples) if examples else "[NO REFERENCE EXAMPLES]"
 
 
@@ -105,7 +105,7 @@ Return ONLY an integer number representing the minutes saved. It can be 0 or a p
 ---
 
 INSTRUCTIONS:
-- Reply with the exact number of minutes saved. 
+- Reply with the exact number of minutes saved.
 - Reply 0 only if the response is purely a greeting, confirmation, vague promise of help, or only a follow-up question with no actual work done.
 
 ---

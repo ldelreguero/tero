@@ -2,6 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.0/.schema/devbox.schema.json",
   "packages": {
     "python": "3.13",
+    "git": "latest",
+    "uv": "latest",
     "poetry": {
       "version": "latest",
       // this fails because is trying to find a pyproject.toml at the root of the project
@@ -55,6 +57,9 @@
       "secrets-cleanup": [
         "cd src/backend",
         "poetry run python -m tero.secrets_cleanup"
+      ],
+      "vllm": [
+        "./scripts/vllm.sh"
       ],
       "playwright": [
         "docker compose up playwright"

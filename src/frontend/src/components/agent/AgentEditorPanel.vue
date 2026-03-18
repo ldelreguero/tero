@@ -3,7 +3,7 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, onBeforeRouteUpdate, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Agent, ApiService, LlmModel, AgentToolConfig, AutomaticAgentField, Team, TestCase, TestSuiteRun, GLOBAL_TEAM_ID, Role, TeamRoleStatus, findManifest } from '@/services/api'
-import { IconPlayerPlay, IconPencil, IconDownload, IconUpload, IconListDetails } from '@tabler/icons-vue'
+import { IconPencil, IconDownload, IconUpload, IconListDetails, IconSettings } from '@tabler/icons-vue'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useAgentStore } from '@/composables/useAgentStore'
 import { useAgentPromptStore } from '@/composables/useAgentPromptStore'
@@ -11,6 +11,7 @@ import { useTestCaseStore } from '@/composables/useTestCaseStore'
 import { loadUserProfile } from '@/composables/useUserProfile'
 import { AgentPrompt, UploadedFile } from '../../../../common/src/utils/domain'
 import { AgentTestcaseChatUiMessage } from './AgentTestcaseChatMessage.vue'
+import SavingIndicator from '@/components/common/SavingIndicator.vue'
 
 const props = defineProps<{
   selectedThreadId: number
@@ -68,6 +69,8 @@ const showImportAgent = ref(false)
 const showPastExecutions = ref(false)
 const showGenerateDialog = ref(false)
 const selectedField = ref<AutomaticAgentField | null>(null)
+const showAdvancedSettings = ref(false)
+const savingAdvancedSettings = ref(false)
 
 const loadAgentData = async (agentIdStr: string) => {
   const agentId = parseInt(agentIdStr)
@@ -172,7 +175,9 @@ const updateAgent = async () => {
   }
 
   if (!compareAgents({ ...agent.value, team: findTeam(selectedTeam.value!) }, backendAgent.value!)) {
-    isSaving.value = true
+    if (!showAdvancedSettings.value) {
+      isSaving.value = true
+    }
     try {
       await api.updateAgent({ ...agent.value!, publishPrompts: publishPrompts.value, teamId: selectedTeam.value || null })
       const updatedAgent = { ...agent.value!, team: findTeam(selectedTeam.value!) }
@@ -304,6 +309,18 @@ const onImportAgent = async (file: UploadedFile) => {
   }
 }
 
+const onUpdateAdvancedSettings = async (value: number) => {
+  agent.value!.recursionLimit = value
+  savingAdvancedSettings.value = true
+  try {
+    await updateAgent()
+  } catch (error) {
+    handleError(error)
+  } finally {
+    savingAdvancedSettings.value = false
+  }
+}
+
 const onSelectExecution = (execution: TestSuiteRun) => {
   emit('selectExecution', execution)
   showPastExecutions.value = false
@@ -358,25 +375,17 @@ const onGenerate = async () => {
                 </div>
               </Tab>
             </TabList>
-            <div v-if="isSaving" class="flex flex-row px-2 items-center text-sm animate-pulse">
-              <IconDeviceFloppy />
-              <span class="mt-1 ml-1">{{ t('saving') }}</span>
-            </div>
+            <SavingIndicator v-if="isSaving" text-class="mt-1 ml-1" />
           </div>
           <AgentChatMenu
             v-if="activeTab === '0'"
             ref="menu"
             @menu-toggle="(event: Event) => menu?.toggle(event)"
             :items="[
-              {
-                label: t('exportAgent'),
-                tablerIcon: IconUpload,
-                command: () => exportAgent()
-              }, {
-                label: t('importAgent'),
-                tablerIcon: IconDownload,
-                command: () => showImportAgent = true
-              }]"/>
+              {label: t('exportAgent'), tablerIcon: IconDownload, command: () => exportAgent()},
+              {label: t('importAgent'), tablerIcon: IconUpload, command: () => showImportAgent = true},
+              {label: t('advancedSettings'), tablerIcon: IconSettings, command: () => showAdvancedSettings = true}
+            ]"/>
         </div>
       </template>
       <div v-if="isComparingResultWithTestSpec && testSpecMessages" class="flex-1 overflow-y-auto p-4">
@@ -432,7 +441,7 @@ const onGenerate = async () => {
               <AgentConversationStarters :starters="starters" @delete="handleStarterDelete" :agent="agent"
                 @reload="handleReloadStarters" />
             </div>
-            <div class="form-field relative">
+            <div class="form-field">
               <AgentToolConfigsEditor :agent-id="agent.id" :tool-configs="toolConfigs" @update="onUpdateToolConfigs" />
             </div>
           </div>
@@ -482,6 +491,7 @@ const onGenerate = async () => {
   </Dialog>
   <AgentImportDialog v-model:visible="showImportAgent" @import="onImportAgent" />
   <AgentGenerateDialog v-model:visible="showGenerateDialog" :field="selectedField!" @generate="onGenerate" />
+  <AgentAdvancedSettingsDialog v-model:visible="showAdvancedSettings" :recursion-limit="agent?.recursionLimit!" :saving="savingAdvancedSettings" @update="onUpdateAdvancedSettings" />
   <AgentPastExecutionsDialog v-if="agent" v-model:visible="showPastExecutions" :agent-id="agent.id" @select-execution="onSelectExecution" />
 </template>
 
@@ -491,7 +501,6 @@ const onGenerate = async () => {
     "nameLabel": "Name",
     "descriptionLabel": "Description",
     "systemPromptLabel": "Instructions",
-    "saving": "Saving...",
     "namePlaceholder": "Enter a name for the agent",
     "descriptionPlaceholder": "What does this agent do?",
     "systemPromptPlaceholder": "Write the instructions for this agent",
@@ -523,13 +532,13 @@ const onGenerate = async () => {
     "testsTabTitle": "Tests",
     "exportAgent": "Export",
     "importAgent": "Import",
-    "testSpec": "Test case specification"
+    "testSpec": "Test case specification",
+    "advancedSettings": "Advanced settings"
   },
   "es": {
     "nameLabel": "Nombre",
     "descriptionLabel": "Descripción",
     "systemPromptLabel": "Instrucciones",
-    "saving": "Guardando...",
     "namePlaceholder": "Ingresa el nombre del agente",
     "descriptionPlaceholder": "¿Qué hace este agente?",
     "systemPromptPlaceholder": "Escribe las instrucciones de este agente",
@@ -561,7 +570,8 @@ const onGenerate = async () => {
     "testsTabTitle": "Tests",
     "exportAgent": "Exportar",
     "importAgent": "Importar",
-    "testSpec": "Especificación del test case"
+    "testSpec": "Especificación del test case",
+    "advancedSettings": "Configuración avanzada"
   }
 }
 </i18n>

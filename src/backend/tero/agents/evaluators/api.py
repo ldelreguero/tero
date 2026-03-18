@@ -12,9 +12,9 @@ from ..repos import AgentRepository
 from ..test_cases.api import TEST_CASE_PATH, find_test_case_by_id
 from ..test_cases.repos import TestCaseRepository
 from ..test_cases.runner import (
+    EVALUATOR_DEFAULT_INSTRUCTIONS,
     EVALUATOR_DEFAULT_REASONING_EFFORT,
     EVALUATOR_DEFAULT_TEMPERATURE,
-    EVALUATOR_HUMAN_MESSAGE,
 )
 from .domain import Evaluator, PublicEvaluator
 from .repos import EvaluatorRepository
@@ -33,10 +33,10 @@ async def find_agent_evaluator(agent_id: int, user: Annotated[User, Depends(get_
         return PublicEvaluator.from_evaluator(evaluator)
     else:
         return PublicEvaluator(
-            model_id=cast(str, env.internal_evaluator_model), 
-            temperature=EVALUATOR_DEFAULT_TEMPERATURE, 
-            reasoning_effort=EVALUATOR_DEFAULT_REASONING_EFFORT, 
-            prompt=EVALUATOR_HUMAN_MESSAGE
+            model_id=cast(str, env.internal_evaluator_model),
+            temperature=EVALUATOR_DEFAULT_TEMPERATURE,
+            reasoning_effort=EVALUATOR_DEFAULT_REASONING_EFFORT,
+            prompt=EVALUATOR_DEFAULT_INSTRUCTIONS
         )
 
 

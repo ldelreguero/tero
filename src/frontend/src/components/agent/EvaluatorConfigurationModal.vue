@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ApiService, LlmModel, LlmTemperature, ReasoningEffort, LlmModelType } from '@/services/api'
+import { ApiService, LlmModel, LlmTemperature, ReasoningEffort } from '@/services/api'
 import { Evaluator } from '@/services/api'
-import { IconSearch, IconX, IconBrandOpenai } from '@tabler/icons-vue'
 import LlmModelSettings from './LlmModelSettings.vue'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
@@ -85,12 +84,16 @@ const onSave = () => {
       <div class="flex flex-col gap-2 w-full border-b pb-4">
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-2">
-            <IconSearch />
-            <h3>{{ testCaseId && testCaseName ? `${testCaseName} ${t('evaluator')}` : `${t('evaluatorTitle')}` }}</h3>
+            <IconClipboardCheck />
+            <h3>{{ testCaseId && testCaseName ? t('evaluatorTitleForTestCase', { testCaseName }) : t('evaluatorTitle') }}</h3>
           </div>
           <SimpleButton @click="onClose"><IconX /></SimpleButton>
         </div>
-        <p v-if="testCaseId" class="text-sm text-content-muted">{{ t('testCaseEvaluatorNote') }}</p>
+        <i18n-t v-if="testCaseId" keypath="testCaseEvaluatorNote" tag="p" class="text-sm text-content-muted">
+          <template #testCaseName>
+            <b class="text-content">{{ testCaseName }}</b>
+          </template>
+        </i18n-t>
       </div>
     </template>
     <div v-if="isLoading" class="flex flex-col gap-4 animate-pulse">
@@ -151,7 +154,6 @@ const onSave = () => {
           :rows="10"
           :placeholder="t('instructionsPlaceholder')"
         />
-        <div class="text-sm whitespace-pre-line">{{ t('availableVariablesNote') }}</div>
       </div>
     </div>
     <template #footer>
@@ -172,23 +174,23 @@ const onSave = () => {
   "en": {
     "evaluator": "evaluator",
     "evaluatorTitle": "Agent evaluator",
-    "testCaseEvaluatorNote": "This evaluator configuration will only be used for this specific test case.",
+    "evaluatorTitleForTestCase": "Test evaluator",
+    "testCaseEvaluatorNote": "This evaluator configuration will only be used for the test {testCaseName}.",
     "modelLabel": "Model",
     "instructionsLabel": "Instructions",
     "instructionsPlaceholder": "Write the instructions for this evaluator",
-    "availableVariablesNote": "You can use these variables in your instructions:\n• {'{'}{'{'}inputs{'}'}{'}'} - user message\n• {'{'}{'{'}reference_outputs{'}'}{'}'} - expected response\n• {'{'}{'{'}outputs{'}'}{'}'} - actual agent response",
     "cancel": "Cancel",
     "confirm": "Confirm"
 
   },
   "es": {
     "evaluator": "evaluador",
-    "evaluatorTitle": "Evaluador del agente",
-    "testCaseEvaluatorNote": "Esta configuración del evaluador solo se usará para este caso de prueba específico.",
+    "evaluatorTitle": "Evaluador de agente",
+    "evaluatorTitleForTestCase": "Evaluador de test",
+    "testCaseEvaluatorNote": "Esta configuración del evaluador solo se usará para el test {testCaseName}.",
     "modelLabel": "Modelo",
     "instructionsLabel": "Instrucciones",
     "instructionsPlaceholder": "Escribe las instrucciones para este evaluador",
-    "availableVariablesNote": "Puedes usar estas variables en tus instrucciones:\n• {'{'}{'{'}inputs{'}'}{'}'} - mensaje del usuario\n• {'{'}{'{'}reference_outputs{'}'}{'}'} - respuesta esperada\n• {'{'}{'{'}outputs{'}'}{'}'} - respuesta actual del agente",
     "cancel": "Cancelar",
     "confirm": "Confirmar"
 

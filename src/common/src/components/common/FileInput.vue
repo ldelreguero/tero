@@ -73,7 +73,7 @@ const buildErrorMessage = (files: string[], errorType: string) => {
   return errorMessages[errorType as keyof typeof errorMessages]
 }
 
-const validateFiles = (files: FileList) => {
+const validateFiles = (files: File[] | FileList) => {
   const newFiles = Array.from(files || [])
   if (!newFiles.length) return
 
@@ -156,8 +156,14 @@ const triggerFileInput = () => {
   inputRef.value?.click()
 }
 
+const addFiles = (files: File[]) => {
+  if (props.disabled || !files.length) return
+  validateFiles(files)
+}
+
 defineExpose({
-  triggerFileInput
+  triggerFileInput,
+  addFiles
 })
 </script>
 

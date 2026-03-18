@@ -62,15 +62,15 @@ class AgentEngine:
             tool = await stack.enter_async_context(agent_tool.load())
             ret.append(tool)
         return ret
-    
+
     async def answer(self, messages: List[ThreadMessage], message_usage: MessageUsage, stop_event: asyncio.Event) -> AsyncIterator[AgentEvent]:
         llm = ai_factory.build_streaming_chat_model(self._agent.model.id, self._agent.model_temperature,  self._agent.model_reasoning_effort)
         async with AsyncExitStack() as stack:
             agent_tools = await self.load_tools(stack, thread_id=messages[0].thread_id)
             tools = [ lt for t in agent_tools for lt in await t.build_langchain_tools() ]
             tools.append(clock)
-            # Enable error handling so ToolException from MCP tools (execution errors) 
-            # are shown to the LLM instead of crashing the agent 
+            # Enable error handling so ToolException from MCP tools (execution errors)
+            # are shown to the LLM instead of crashing the agent
             agent = create_react_agent(
                 llm, ToolNode(tools, handle_tool_errors=True), pre_model_hook=self._build_message_trimmer(llm, tools)
             )
@@ -80,8 +80,7 @@ class AgentEngine:
             stream = agent.astream(
                 input,
                 {
-                    # multiply by 2 and add 1 because recursion counts every event (find tool & call tool)
-                    "recursion_limit": 20 * 2 + 1
+                    "recursion_limit": self._agent.recursion_limit
                 },
                 stream_mode=["updates", "messages", "custom"],
             )
@@ -110,7 +109,7 @@ class AgentEngine:
                         message_usage.increment_tool_usage(agent_tool_metadata.tool_usage)
                         if agent_tool_metadata.file:
                             yield AgentFileEvent(file=agent_tool_metadata.file)
-            
+
             # If the response was stopped, approximate the token usage
             if stop_event.is_set():
                 approximate_input_tokens = llm.get_num_tokens_from_messages(input["messages"]) + self._count_tools_tokens(tools, llm)
@@ -121,7 +120,7 @@ class AgentEngine:
                         "output_tokens": approximate_output_tokens,
                         "total_tokens": approximate_input_tokens + approximate_output_tokens
                     }, self._agent.model)
-    
+
     def _get_content(self, msg: str | list[str | dict]) -> str:
         if isinstance(msg, str):
             return msg
@@ -136,7 +135,7 @@ class AgentEngine:
                         texts.append(text)
             return "".join(texts)
         raise ValueError(f"Invalid message type: {type(msg)}")
-            
+
     async def _process_updates(self, content: Any) -> AsyncIterator[AgentActionEvent]:
         if isinstance(content, dict):
             ((key, value), *_) = content.items()

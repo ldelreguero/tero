@@ -18,7 +18,7 @@ if env.aws_access_key_id and env.aws_secret_access_key:
     providers.append(AWSProvider())
 if env.google_api_key:
     providers.append(GoogleProvider())
-if env.vllm_base_url and env.vllm_api_key:
+if env.vllm_urls and env.vllm_api_keys:
     providers.append(VllmAiProvider())
 
 

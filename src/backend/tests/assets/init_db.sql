@@ -31,13 +31,13 @@ insert into team_role (team_id, user_id, role, status) values
 (4, 2, 'TEAM_MEMBER', 'PENDING'),
 (4, 5, 'TEAM_MEMBER', 'REJECTED');
 
-insert into agent (name, description, user_id, last_update, team_id, model_id, system_prompt, temperature, reasoning_effort) values
-('Agent 1', 'This is the first agent', 1, '2025-02-21 12:00', Null, 'gpt-4o-mini', 'You are a helpful AI agent.', 'PRECISE', 'LOW'),
-('Agent 2', 'This is the second agent', 1, '2025-02-21 12:01', 1, 'o4-mini', 'You are a helpful AI agent.', 'CREATIVE', 'LOW'),
-('Agent 3', 'This is the third agent', 2, '2025-02-21 12:02', 4, 'gpt-4o', 'You are a helpful AI agent.', 'PRECISE', 'LOW'),
-('Agent 4', 'This is the fourth agent', 2, '2025-02-21 12:03', Null, 'gpt-4o', 'You are a helpful AI agent.', 'CREATIVE', 'LOW'),
-('Agent 5', 'This is the fifth agent', 2, '2025-02-21 12:04', 2, 'gpt-4o', 'You are a helpful AI agent.', 'PRECISE', 'LOW'),
-('GPT-5 Nano', 'This is the default agent', Null, '2025-02-21 12:00', 1, 'gpt-5-nano', 'You are a helpful AI agent.', 'NEUTRAL', 'LOW');
+insert into agent (name, description, user_id, last_update, team_id, model_id, system_prompt, temperature, reasoning_effort, recursion_limit) values
+('Agent 1', 'This is the first agent', 1, '2025-02-21 12:00', Null, 'gpt-4o-mini', 'You are a helpful AI agent.', 'PRECISE', 'LOW', 20),
+('Agent 2', 'This is the second agent', 1, '2025-02-21 12:01', 1, 'o4-mini', 'You are a helpful AI agent.', 'CREATIVE', 'LOW', 20),
+('Agent 3', 'This is the third agent', 2, '2025-02-21 12:02', 4, 'gpt-4o', 'You are a helpful AI agent.', 'PRECISE', 'LOW', 20),
+('Agent 4', 'This is the fourth agent', 2, '2025-02-21 12:03', Null, 'gpt-4o', 'You are a helpful AI agent.', 'CREATIVE', 'LOW', 20),
+('Agent 5', 'This is the fifth agent', 2, '2025-02-21 12:04', 2, 'gpt-4o', 'You are a helpful AI agent.', 'PRECISE', 'LOW', 20),
+('GPT-5 Nano', 'This is the default agent', Null, '2025-02-21 12:00', 1, 'gpt-5-nano', 'You are a helpful AI agent.', 'NEUTRAL', 'LOW', 20);
 
 insert into user_agent (user_id, agent_id, creation) values
 (1, 1, '2025-02-21 12:00'),
@@ -181,6 +181,6 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER after_update_test_suite_run_status
 AFTER UPDATE OF status ON test_suite_run
-FOR EACH ROW 
+FOR EACH ROW
 WHEN (OLD.status IS DISTINCT FROM NEW.status)
 EXECUTE FUNCTION notify_test_suite_run_status();

@@ -44,7 +44,7 @@ const useTables = (md: MarkdownIt) => {
     for (let i = tokens.length - 1; i >= 0; i--) {
       if (tokens[i].type === 'table_close') {
         const wrapClose = new Token('html_block', '', 0)
-        wrapClose.content = `</div>${downloadButton}</div>` 
+        wrapClose.content = `</div>${downloadButton}</div>`
         tokens.splice(i + 1, 0, wrapClose)
       }
       if (tokens[i].type === 'table_open') {
@@ -157,6 +157,7 @@ const formatEpoch = (config: any): ((value: any) => string) => {
 
 export const renderMarkDown = (text: string, isComplete: boolean, t?: (key: string) => string) => {
   let md = new MarkdownIt({
+    breaks: true,
     highlight: function (str, lang) {
       if (lang) {
         const copyButtonText = t ? t('copyCodeButton') : 'Copy'

@@ -221,11 +221,11 @@ const handleNextMessage = () => {
                 findPrompts: async () => [],
                 savePrompt: async () => {},
                 deletePrompt: async () => {},
-                supportsStopResponse: () => false, 
-                supportsFileUpload: () => true, 
-                supportsTranscriptions: () => false, 
-                transcribe: async () => '', 
-                handleError: () => {} 
+                supportsStopResponse: () => false,
+                supportsFileUpload: () => true,
+                supportsTranscriptions: () => false,
+                transcribe: async () => '',
+                handleError: () => {}
               }">
               <template #rightActions>
                 <div class="flex gap-3">

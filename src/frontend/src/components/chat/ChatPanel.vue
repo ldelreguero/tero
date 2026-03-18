@@ -10,9 +10,11 @@ import { useErrorHandler } from '@/composables/useErrorHandler';
 import { ChatUiMessage, type StatusUpdate } from '@tero/common/components/chat/ChatMessage.vue';
 import { useAgentPromptStore } from '@/composables/useAgentPromptStore';
 import ChatPanelHeader from './ChatPanelHeader.vue';
-import { AuthenticationError, handleOAuthRequestsIn } from '@/services/toolAuth';
+import { handleToolAuthRequestsIn } from '@/services/toolAuth';
+import { AuthenticationError } from '@tero/common/utils/toolAuth.js';
 import { UserFeedback, AgentPrompt, UploadedFile, FileStatus } from '../../../../common/src/utils/domain';
 import ChatInput from '../../../../common/src/components/chat/ChatInput.vue';
+import ChatStarters from '../../../../common/src/components/chat/ChatStarters.vue';
 import { loadUserProfile } from '@/composables/useUserProfile';
 
 const props = defineProps({
@@ -54,14 +56,16 @@ const chat = computed(() => chatsStore.currentChat);
 const starterPrompts = computed(() =>
   agentsPromptStore.prompts.filter(p => p.starter)
 )
+const contactEmail = ref<string>('');
 
 onMounted(async () => {
   agentsPromptStore.prompts = [];
-  await loadChatData(props.threadId);
   const user = await loadUserProfile()
   if (user?.teams.some(t => t.status === TeamRoleStatus.ACCEPTED && t.role === Role.TEAM_OWNER)) {
     shareablePrompts.value = true
   }
+  contactEmail.value = (await findManifest()).contactEmail
+  await loadChatData(props.threadId);
 })
 
 const loadChatData = async (threadId: number) => {
@@ -72,6 +76,7 @@ const loadChatData = async (threadId: number) => {
     if(!props.editingAgent) setCurrentAgent(thread.agent);
     messages.value = (await api.findThreadMessages(threadId)).map(thread => mapThreadMessageToChatUi(thread));
     await loadAgentPrompts(thread.agent.id);
+    await chatInputRef.value?.reloadPrompts();
     await chatInputRef.value?.focus();
     scrollToLastChatMessage(false);
   } catch (e) {
@@ -83,13 +88,30 @@ function mapThreadMessageToChatUi(
   threadMsg: ThreadMessage,
   parent?: ChatUiMessage
 ): ChatUiMessage {
+  const { text, isSuccess } = mapThreadMessageTextAndStatus(threadMsg)
   const files = threadMsg.files || [] as UploadedFile[]
-  const uiMsg = new ChatUiMessage(threadMsg.text, files, threadMsg.origin === ThreadMessageOrigin.USER, true, true, [], parent, threadMsg.id, threadMsg.minutesSaved, threadMsg.feedbackText, threadMsg.hasPositiveFeedback, threadMsg.stopped, threadMsg.statusUpdates);
+  const uiMsg = new ChatUiMessage(text, files, threadMsg.origin === ThreadMessageOrigin.USER, true, isSuccess, [], parent, threadMsg.id, threadMsg.minutesSaved, threadMsg.feedbackText, threadMsg.hasPositiveFeedback, threadMsg.stopped, threadMsg.statusUpdates);
   for (const childThread of threadMsg.children) {
     const childUi = mapThreadMessageToChatUi(childThread, uiMsg)
     uiMsg.children.push(childUi)
   }
   return uiMsg
+}
+
+function mapThreadMessageTextAndStatus(threadMsg: ThreadMessage): { text: string; isSuccess: boolean } {
+  if (threadMsg.origin === ThreadMessageOrigin.USER) {
+    return { text: threadMsg.text, isSuccess: true }
+  }
+
+  if (threadMsg.text === 'ERROR_RECURSION_LIMIT_EXCEEDED') {
+    return { text: t('recursionLimitExceeded'), isSuccess: false }
+  }
+
+  if (threadMsg.text === 'ERROR_GENERIC') {
+    return { text: t('agentAnswerError', { contactEmail: contactEmail.value }), isSuccess: false }
+  }
+
+  return { text: threadMsg.text, isSuccess: true }
 }
 
 const scrollToLastChatMessage = (smooth = true) => {
@@ -147,17 +169,23 @@ const onSendUserMessage = async () => {
   const text = inputText.value;
   const files = attachedFiles.value;
   attachedFiles.value = [];
+
+  const { message } = getSelectedBranch(messages.value, showMessageIndexes.value)!;
+  if (
+    message?.isSuccess === false &&
+    !message.isUser &&
+    message.parent?.isUser &&
+    message.parent.id != null
+  ) {
+    await handleEditMessage(message.parent.id, text, files);
+    return;
+  }
+
   await sendUserMessage(text, files);
 };
 
 const sendUserMessage = async (text:string, files: UploadedFile[] = [], editMessageId?: number)=>{
   streamingResponse.value = true
-
-  const {message, lastDepth} = getSelectedBranch(messages.value, showMessageIndexes.value)!;
-  if(message?.isSuccess === false) {
-    message.parent!.children = message.parent!.children.filter(m => m.id !== message.id) as ChatUiMessage[];
-    delete showMessageIndexes.value[lastDepth];
-  }
 
   const userUIMessage = ChatUiMessage.userMessage(text, files);
   const parentMessageId = appendMessage(userUIMessage, editMessageId)
@@ -174,7 +202,7 @@ const sendUserMessage = async (text:string, files: UploadedFile[] = [], editMess
   await updateChat(chat.value!)
   await updateAgent(chat.value!.agent.id)
   try {
-    await handleOAuthRequestsIn(async () => {
+    await handleToolAuthRequestsIn(async () => {
       const answer = await api.sendMessage(chat.value!.id, text, files, parentMessageId, props.editingAgent);
       scrollToLastChatMessage();
       await processAnswer(answer, answerMsg, userUIMessage)
@@ -249,46 +277,61 @@ const findMessageById = (id: number) => {
 
 const processAnswer = async (answer: AsyncIterable<ThreadMessagePart>, answerMsg: ChatUiMessage, userUIMessage: ChatUiMessage) => {
   let firstPart = true;
-  for await (const part of answer) {
-    if (part.answerText) {
-      if (messages.value[0].children.length == 1 && firstPart) {
-        // If is the first message then the chat name must have updated
-        await updateChat(await api.findThread(chat.value!.id))
+  let buffer = ''
+  // Batch token updates every 100ms to avoid re-rendering on every incoming token.
+  const intervalId = setInterval(() => { buffer = flushStreamBuffer(buffer, answerMsg) }, 100)
+
+  try {
+    for await (const part of answer) {
+      if (part.answerText) {
+        if (messages.value[0].children.length == 1 && firstPart) {
+          // If is the first message then the chat name must have updated
+          await updateChat(await api.findThread(chat.value!.id))
+        }
+        firstPart = false
+        buffer += part.answerText
+      } else if (part.userMessage) {
+        userUIMessage.id = part.userMessage.id
+        userUIMessage.files = part.userMessage.files || []
+      } else if (part.metadata) {
+        const lastStatus = answerMsg.statusUpdates[answerMsg.statusUpdates.length - 1]
+        lastStatus.timestamp = new Date()
+        answerMsg.completeStatus()
+        answerMsg.id = part.metadata.answerMessageId
+        answerMsg.minutesSaved = part.metadata.minutesSaved
+        answerMsg.stopped = part.metadata.stopped
+        answerMsg.files = part.metadata.files
+      } else if (part.status) {
+        const statusUpdate: StatusUpdate = {
+          action: part.status.action,
+          toolName: part.status.toolName,
+          description: part.status.description,
+          args: part.status.args,
+          step: part.status.step,
+          result: part.status.result,
+          timestamp: new Date()
+        }
+        answerMsg.addStatusUpdate(statusUpdate)
+        scrollToLastChatMessage()
       }
-      firstPart = false
-      answerMsg.text += part.answerText
     }
-    else if (part.userMessage) {
-      userUIMessage.id = part.userMessage.id
-      userUIMessage.files = part.userMessage.files || []
-    } else if (part.metadata) {
-      const lastStatus = answerMsg.statusUpdates[answerMsg.statusUpdates.length - 1]
-      lastStatus.timestamp = new Date()
-      answerMsg.completeStatus()
-      answerMsg.id = part.metadata.answerMessageId
-      answerMsg.minutesSaved = part.metadata.minutesSaved
-      answerMsg.stopped = part.metadata.stopped
-      answerMsg.files = part.metadata.files
-    } else if (part.status) {
-      const statusUpdate: StatusUpdate = {
-        action: part.status.action,
-        toolName: part.status.toolName,
-        description: part.status.description,
-        args: part.status.args,
-        step: part.status.step,
-        result: part.status.result,
-        timestamp: new Date()
-      }
-      answerMsg.addStatusUpdate(statusUpdate)
-      scrollToLastChatMessage()
-    }
+  } finally {
+    clearInterval(intervalId)
+    flushStreamBuffer(buffer, answerMsg)
   }
+}
+
+const flushStreamBuffer = (buffer: string, answerMsg: ChatUiMessage): string => {
+  if (buffer) answerMsg.text += buffer
+  return ''
 }
 
 const processAnswerError = async (e: unknown, answerMsg: ChatUiMessage, userUIMessage: ChatUiMessage) => {
   const contactEmail = (await findManifest()).contactEmail
   let text = ""
-  if (e instanceof HttpError && e.status === 429 && e.message.includes('quotaExceeded')) {
+  if (e instanceof HttpError && e.body === 'recursionLimitExceeded') {
+    text = t('recursionLimitExceeded')
+  } else if (e instanceof HttpError && e.status === 429 && (e.body?.includes?.('quotaExceeded') || e.message.includes('quotaExceeded'))) {
     text = t('quotaExceeded', { contactEmail })
   } else if (e instanceof AuthenticationError) {
     text = t(e.errorCode)
@@ -431,22 +474,7 @@ const handleCreateTestCase = async () => {
             />
           </div>
         </div>
-        <div v-if="messages.length === 0 && starterPrompts.length > 0" class="flex flex-col gap-8 items-start max-w-[837px] mx-auto">
-            <p class="text-left whitespace-pre-line text-lg">
-              {{ t('starterText') }}
-            </p>
-            <div class="flex flex-wrap gap-4 text-content-muted ">
-              <div v-for="prompt in starterPrompts" :key="prompt.id">
-                <button
-                  @click="chatInputRef?.selectPrompt(prompt)"
-                  class="w-[185px] h-[94px] rounded-lg border p-3 text-left hover:border-abstracta shadow flex items-start">
-                    <span class="line-clamp-3">
-                      {{ prompt.name }}
-                    </span>
-                </button>
-              </div>
-            </div>
-        </div>
+        <ChatStarters v-if="messages.length === 0 && starterPrompts.length > 0" :prompts-starters="starterPrompts" :chat-input-ref="chatInputRef!" />
       </div>
       <ChatInput
         v-model="inputText"
@@ -479,17 +507,17 @@ const handleCreateTestCase = async () => {
       "authenticationWindowBlocked": "The authentication popup could not be opened. Please check that popups are allowed for this site and try again.",
       "authenticationCancelled": "The authentication was cancelled. Please, try again and complete the authentication to use this agent.",
       "authenticationAccessDenied": "The authentication was denied by the server. Please verify that you actually have the permissions necessary to use it.",
-      "agentAnswerError": "I am currently unable to complete your request. You can try again and if the issue persists contact [support](mailto:{contactEmail}?subject=Tero%20issue)",
+      "agentAnswerError": "I can't help with that message. Edit it or send a new one. If the problem continues, [contact the support team](mailto:{contactEmail}?subject=Question%20issue)",
       "quotaExceeded": "You have reached the monthly usage quota. Contact [support](mailto:{contactEmail}?subject=Tero%20Monthly%20Limit) to increase your monthly quota or wait for the next month.",
-      "starterText": "Hi! 👋 \n How can I help you?"
+      "recursionLimitExceeded": "The step limit for this response was reached. \n Try a shorter task or break your request into smaller parts. You can review the thought process to improve the use of the agent and avoid steps that you identify as unnecessary."
     },
     "es": {
       "authenticationWindowBlocked": "No se pudo abrir la ventana de autenticación. Por favor, verifica que las ventanas emergentes estén permitidas para este sitio y vuelve a intentarlo.",
       "authenticationCancelled": "La autenticación fue cancelada. Por favor, inténtelo de nuevo y complete la autenticación para usar este agente o esta herramienta.",
       "authenticationAccessDenied": "La autenticación fue denegada por el servidor. Por favor, verifica que tengas los permisos necesarios para usarlo.",
-      "agentAnswerError": "Ahora no puedo completar tu pedido. Puedes intentar de nuevo y si el problema persiste contactar a [soporte](mailto:{contactEmail}?subject=Tero%20issue)",
+      "agentAnswerError": "No puedo ayudarte con ese mensaje. Probá editarlo o enviar uno nuevo. Si el problema continúa, podés [contactar al equipo de soporte](mailto:{contactEmail}?subject=Question%20issue)",
       "quotaExceeded": "Ha alcanzado la cuota de uso mensual. Contacte a [soporte](mailto:{contactEmail}?subject=Tero%20Monthly%20Limit) para aumentar su cuota mensual o espere al próximo mes.",
-      "starterText": "Hola! 👋 \n ¿Cómo puedo ayudarte?"
+      "recursionLimitExceeded": "Se alcanzó el límite de pasos de esta respuesta. \n Intenta con una tarea más corta o divide la solicitud en partes más pequeñas. Puedes revisar el proceso de pensamiento para mejorar el uso del agente y evitar pasos que identifiques que no sean necesarios."
     }
   }
 </i18n>
